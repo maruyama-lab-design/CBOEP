@@ -33,6 +33,7 @@ class ChromeGCN(nn.Module):
 
     def forward(self, x_in, adj,deg,src_dict=None,return_gate=False):
         g2=None
+        # x の 値の範囲は？
         x = x_in # x: 頂点数 * 128
         z = self.GC1(x, adj,deg) # z: 頂点数 * 128
         z = F.tanh(z) # z: 頂点数 * 128
@@ -49,6 +50,7 @@ class ChromeGCN(nn.Module):
         x = self.batch_norm(x)
         x = F.dropout(x, self.dropout, training=self.training)
         out = self.out(x)
+        # out = F.sigmoid(out)
         return x_in,out,(g,g2),None
 
 
