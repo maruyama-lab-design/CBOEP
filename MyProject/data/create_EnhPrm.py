@@ -1,8 +1,6 @@
 import os
 
 cell_line_list = ["GM12878", "K562"]
-# region_types = ["enhancer", "promoter"]
-
 
 def create_EnhPrm():
 	# bedfile を参照し、enhancer, promoter seq の切り出し & fasta形式で保存
