@@ -3,6 +3,9 @@ import os
 cell_line_list = ["GM12878", "K562"]
 # region_types = ["enhancer", "promoter"]
 
+# numpy matrix (contact map), M
+
+# M >= 0.7 M_boolan 
 
 def create_EnhPrm():
 	# bedfile を参照し、enhancer, promoter seq の切り出し & fasta形式で保存
