@@ -1,7 +1,26 @@
 import pandas as pd
 from tqdm import tqdm
 
+# メモ ---------
+# argparse を入れて変数、pathを管理した方が良い
+# まだ未完成
+#--------------
+
+
 def make_region_label_table(cl, bin_length):
+	#-----説明-----
+	# enhancer, promoter それぞれが、どの neighbor 領域に含まれているかを表すテーブルデータを作成する.
+	# 2make_region_table で作られるテーブルデータが必要
+
+		# テーブルデータの例
+			#	neighbor_id		chr   	enhancer				promoter
+			#	:
+			#	NEIGHBOR_34		chr1	Nan						PROMOTER_24,
+			#	NEIGHBOR_35		chr1	ENHANCER_4				Nan
+			#	NEIGHBOR_36		chr1	ENHANCER_18,ENHANCER_78	Nan
+			#	:
+
+	#-------------
 	bin_table = pd.read_csv("MyProject/data/table/region/bin/GM12878_bins.csv", usecols=["id", "start", "end"])
 	print(bin_table.head())
 	print(f"周辺領域の幅: {bin_length}")
@@ -57,8 +76,8 @@ def make_region_label_table(cl, bin_length):
 
 	del promoter_table
 
-	print(bin2enhancer_label[:10])
-	print(bin2promoter_label[:10])
+	print(bin2enhancer_label[:100])
+	print(bin2promoter_label[:100])
 
 
 

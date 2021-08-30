@@ -2,11 +2,14 @@
 from gensim import utils
 from gensim.models.doc2vec import TaggedDocument
 from gensim.models import Doc2Vec
-
 import pandas as pd
 
+# メモ ---------
+# 未完成
+#--------------
+
 cell_line_list = ["GM12878"]
-region_type_list = ["bin", "enhancer", "promoter"]
+region_type_list = ["neighbor", "enhancer", "promoter"]
 for cl in cell_line_list:
 	for region_type in region_type_list:
 		print(cl, region_type, "開始")

@@ -1,14 +1,24 @@
 import pandas as pd
 
+# メモ ---------
+# argparse を入れて変数、pathを管理した方が良い
+# 細胞株のループは関数の外で
+
+# seq カラムはいらないのでは？サイズがデカくなるだけ
+#--------------
+
 cell_line_list = ["GM12878"]
 
-def seq2sentence(k, stride, seq): # k-mer
-	# sentence 内の word 間は空白区切り
+def seq2sentence(k, stride, seq):
+	#-----説明-----
+	# seq(塩基配列) を k-mer に区切り、sentence で返す
+	# 返り値である sentence 内の k-mer 間は空白区切り
+	#-------------
 
 	length = len(seq)
 	sentence = ""
 	start_pos = 0
-	while start_pos <= length-k:
+	while start_pos <= length - k:
 		# k-merに切る
 		word = seq[start_pos : start_pos + k]
 		
@@ -21,17 +31,24 @@ def seq2sentence(k, stride, seq): # k-mer
 
 
 def make_region_table(region_type):
-	# 入力に用いる塩基配列(enhancer, promoter, bin)についてのテーブルデータを作成します.
+	# -----説明-----
+	# region_type(enhancer, promoter, neighbor のいずれか) を入力とし、
+	# 塩基配列(enhancer, promoter, neighbor)についてのテーブルデータを作成します.
 	# 前提として、全領域の bedfile, fastafile が存在する必要があります.
-	# enhancer, promoter のテーブルデータに関する、行データの例
-		#	id				chr   	start	end		n_cnt	seq
-		#	ENHANCER_34		chr1	235686	235784	0		acgtcdgttcg...
+
+		# enhancer のテーブルデータの例
+			#	id				chr   	start	end		n_cnt	seq
+			#	ENHANCER_34		chr1	235686	235784	0		acgtcdgttcg...
+
+	# -------------
 	
 	region_type = region_type.lower()
-	region_types = ["enhancer", "promoter", "bin"]
-	assert region_type in region_types, "enhancer, promoter, bin のいずれかを選択してください"
+	region_types = ["enhancer", "promoter", "neighbor"]
+	assert region_type in region_types, "enhancer, promoter, neighbor のいずれかを選択してください"
 
 	print(f"全ての {region_type} 領域について csvファイルを作成します.")
+
+	# 細胞株毎にループ
 	for cl in cell_line_list:
 		print(f"{cl} 開始")
 		bed_file = open("MyProject/data/bed/"+region_type+"/"+cl+"_"+region_type+"s.bed", "r")
@@ -83,5 +100,5 @@ def make_region_table(region_type):
 
 make_region_table("enhancer")
 make_region_table("promoter")
-make_region_table("bin")
+make_region_table("neighbor")
 
