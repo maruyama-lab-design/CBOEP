@@ -1,3 +1,9 @@
+#__________________
+# よく使うファイルのパス名や変数を記録する
+# argparse の勉強中
+# まだ実用段階ではない
+#__________________
+
 import argparse    # 1. argparseをインポート
 
 parser = argparse.ArgumentParser(description='このプログラムの説明（なくてもよい）')    # 2. パーサを作る
