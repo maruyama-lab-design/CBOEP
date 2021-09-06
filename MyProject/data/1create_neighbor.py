@@ -1,66 +1,51 @@
 import os
 import time
+import argparse
 
-# メモ ---------
-# cell line 毎にループを回すのは関数の外で
-# argparse を入れて変数、pathを管理した方が良い
-#--------------
-
-
-cell_line_list = ["GM12878"]
-def create_neighbor(neighbor_length):
+def create_neighbor(args):
 	# ----- 説明 -----
 	# neighbor_length の長さずつ reference genome から 切り出して fasta 形式で保存
 	# ---------------
 
-	# reference genome 
-	hg19_path = "MyProject/data/fasta/hg19.fa"
+	# reference genome
+	reference_genome_path = f"{args.my_data_folder_path}/reference_genome/hg19.fa"
 
-	# 染色体毎にどれくらいの長さあるのかを length_by_chr に記録しておく
-	# いらない処理なので変更予定あり txtファイルなどで管理して参照した方がわかりやすくて速い
-	print("染色体毎に長さを記録")
-	with open(hg19_path, "r") as fin:
+	# 染色体毎の長さを length_by_chr に記録しておく
+	with open(f"{args.my_data_folder_path}/chrome_sizes.txt", "r") as f_size:
 		length_by_chr = {} # key: 染色体番号, value: 長さ
-		now_chr = 0
-		lines = fin.read().splitlines()
-		seq = ""
+		lines = f_size.read().splitlines()
 		for line in lines:
-			if len(line) == 0:
-				continue
-			if line[0] == ">":
-				if now_chr != 0:
-					length_by_chr[now_chr] = len(seq)
-					# print(len(chromosome_seqs[now_chr]))
-				now_chr += 1
-				seq = ""
-				continue
-			seq += line
+			chr = line.split("\t")[0]
+			length = int(line.split("\t")[1])
+			length_by_chr[chr] = length
 
 	# 細胞株毎にループ
-	# 関数の外でやった方が良い
-	for cl in cell_line_list:
-		print(f"{cl} 開始")
+	for cell_line in args.cell_line_list:
+		print(f"{cell_line} 開始")
 
-		neighbor_bed_path = "Myproject/data/bed/neighbor/"+cl+"_neighbors.bed" # input
-		neighbor_fasta_path = "Myproject/data/fasta/neighbor/"+cl+"_neighbors.fa" # output
+		neighbor_bed_path = f"{args.my_data_folder_path}/bed/neighbor/{cell_line}_neighbors.bed" # input
+		neighbor_fasta_path = f"{args.my_data_folder_path}/fasta/neighbor/{cell_line}_neighbors.fa" # output
 
 		# neighbor の bed file を作る
-		print("bedfile を区間長 "+str(neighbor_length)+" で作る")
+		print("bedfile を区間長 "+str(args.neighbor_length)+" で作ります")
 		with open(neighbor_bed_path, "w") as f_bed:
-			for chr in range(1, 23):
+			for i in range(1, 23):
+				chr = "chr" + str(i)
 				start = 0
-				end = start + neighbor_length
+				end = start + args.neighbor_length
 				while end < length_by_chr[chr]:
-					text = "chr" + str(chr) + "\t" + str(start) + "\t" + str(end) + "\n"
+					text = "chr" + str(i) + "\t" + str(start) + "\t" + str(end) + "\n"
 					f_bed.write(text)
-					start += neighbor_length
-					end += neighbor_length
+					start += args.neighbor_length
+					end += args.neighbor_length
 
 		# bed -> fasta
 		print("bed -> fasta 開始")
-		os.system("bedtools getfasta -fi "+ hg19_path +" -bed "+ neighbor_bed_path +" -fo "+ neighbor_fasta_path)
+		os.system("bedtools getfasta -fi "+ reference_genome_path +" -bed "+ neighbor_bed_path +" -fo "+ neighbor_fasta_path)
+		print(f"{neighbor_fasta_path} に保存完了")
 
 		# 塩基配列を全て小文字へ
+		print("塩基配列を小文字にします.")
 		seqs = ""
 		with open(neighbor_fasta_path, "r") as fout:
 			seqs = fout.read()
@@ -68,4 +53,14 @@ def create_neighbor(neighbor_length):
 		with open(neighbor_fasta_path, "w") as fout:
 			fout.write(seqs)
 
-create_neighbor(5000)
+		print(f"{cell_line} 終了")
+
+
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser(description='reference genome全体を先頭から固定長の長さずつに切り出し、周辺領域(neighbor)とします.')
+	parser.add_argument("-cell_line_list", nargs="+", help="細胞株の名前 (複数選択可能)", default=["GM12878"])
+	parser.add_argument("-my_data_folder_path", help="データのルートとなるフォルダパス")
+	parser.add_argument("-neighbor_length", help="neighborの長さ", type=int, default=5000)
+	args = parser.parse_args()
+
+	create_neighbor(args)

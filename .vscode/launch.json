@@ -9,8 +9,13 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "args": ["filename", "--opt1", "opt1_val"],
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "args":
+            [
+                "-cell_line_list", "GM12878",
+                "-my_data_folder_path", "/Users/ylwrvr/卒論/Koga_code/MyProject/data",
+                 "-neighbor_length", "5000",
+            ],
         }
     ]
 }

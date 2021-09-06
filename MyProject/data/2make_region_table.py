@@ -1,13 +1,9 @@
 import pandas as pd
+import argparse
 
 # メモ ---------
 # argparse を入れて変数、pathを管理した方が良い
-# 細胞株のループは関数の外で
-
-# seq カラムはいらないのでは？サイズがデカくなるだけ
 #--------------
-
-cell_line_list = ["GM12878"]
 
 def seq2sentence(k, stride, seq):
 	#-----説明-----
@@ -30,7 +26,7 @@ def seq2sentence(k, stride, seq):
 	return sentence
 
 
-def make_region_table(region_type):
+def make_region_table(args):
 	# -----説明-----
 	# region_type(enhancer, promoter, neighbor のいずれか) を入力とし、
 	# 塩基配列(enhancer, promoter, neighbor)についてのテーブルデータを作成します.
@@ -42,63 +38,62 @@ def make_region_table(region_type):
 
 	# -------------
 	
-	region_type = region_type.lower()
-	region_types = ["enhancer", "promoter", "neighbor"]
-	assert region_type in region_types, "enhancer, promoter, neighbor のいずれかを選択してください"
+	for region_type in args.region_type_list:
+		print(f"全ての {region_type} 領域について csvファイルを作成します.")
+		# 細胞株毎にループ
+		for cell_line in args.cell_line_list:
+			print(f"{cell_line} 開始")
+			bed_file = open(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed", "r")
+			fasta_file = open(f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa", "r")
 
-	print(f"全ての {region_type} 領域について csvファイルを作成します.")
+			id = 0
+			region_ids = [] # ENHANCER_0 などの id を入れていく
+			chrs = [] # chr1 などを入れていく
+			starts = []	# start pos を入れていく
+			ends = [] # end pos を入れていく
+			n_cnts = [] # sequence 内の "n" の個数を入れていく
 
-	# 細胞株毎にループ
-	for cl in cell_line_list:
-		print(f"{cl} 開始")
-		bed_file = open("MyProject/data/bed/"+region_type+"/"+cl+"_"+region_type+"s.bed", "r")
-		fasta_file = open("MyProject/data/fasta/"+region_type+"/"+cl+"_"+region_type+"s.fa", "r")
+			bed_lines = bed_file.read().splitlines()
+			fasta_lines = fasta_file.read().splitlines()
 
-		id = 0
-		region_ids = [] # ENHANCER_0 などの id を入れていく
-		chrs = [] # chr1 などを入れていく
-		starts = []	# start pos を入れていく
-		ends = [] # end pos を入れていく
-		seqs = [] # 塩基配列 の sequence を入れていく
-		n_cnts = [] # sequence 内の "n" の個数を入れていく
+			for fasta_line in fasta_lines:
 
-		bed_lines = bed_file.read().splitlines()
-		fasta_lines = fasta_file.read().splitlines()
+				# ">chr1:17000-18000" のような行を飛ばす.
+				if fasta_line[0] == ">":
+					continue
 
-		for fasta_line in fasta_lines:
+				bed_line_list = bed_lines[id].split("\t")
+				chrs.append(bed_line_list[0])
+				starts.append(bed_line_list[1])
+				ends.append(bed_line_list[2])
+				n_cnt = fasta_line.count("n")
+				n_cnts.append(n_cnt)
+				region_id = region_type.upper() + "_" + str(id)
+				region_ids.append(region_id)
+				id += 1
 
-			# ">chr1:17000-18000" のような行を飛ばす.
-			if fasta_line[0] == ">":
-				continue
+			df = pd.DataFrame({
+				"id":region_ids,
+				"chr":chrs,
+				"start":starts,
+				"end":ends,
+				"n_cnt":n_cnts,
+			})
+			df.to_csv(f"{args.my_data_folder_path}/table/region/{region_type}/{cell_line}_{region_type}s.csv")
 
-			bed_line_list = bed_lines[id].split("\t")
-			chrs.append(bed_line_list[0])
-			starts.append(bed_line_list[1])
-			ends.append(bed_line_list[2])
-			seqs.append(fasta_line)
-			n_cnt = fasta_line.count("n")
-			n_cnts.append(n_cnt)
-			region_id = region_type.upper() + "_" + str(id)
-			region_ids.append(region_id)
-			id += 1
+			bed_file.close()
+			fasta_file.close()
+			print(f"{cell_line} 完了")
 
-		df = pd.DataFrame({
-			"id":region_ids,
-			"chr":chrs,
-			"start":starts,
-			"end":ends,
-			"n_cnt":n_cnts,
-			"seq":seqs,
-		})
-		df.to_csv("MyProject/data/table/region/"+region_type+"/"+cl+"_"+region_type+"s.csv")
+		print(f"{region_type} 終了")
 
-		bed_file.close()
-		fasta_file.close()
-		print(f"{cl} 完了")
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser(description='各regionタイプ(enhancer, promoter, neighbor)毎のテーブルデータを作成します.')
+	parser.add_argument("-cell_line_list", nargs="+", help="細胞株の名前 (複数選択可能)", default=["GM12878"])
+	parser.add_argument("-region_type_list", nargs="+", default=["enhancer", "promoter", "neighbor"])
+	parser.add_argument("-my_data_folder_path", help="データのルートとなるフォルダパス")
+	parser.add_argument("-neighbor_length", help="neighborの長さ", type=int, default=5000)
+	args = parser.parse_args()
 
-	print(f"{region_type} 終了")
-
-make_region_table("enhancer")
-make_region_table("promoter")
-make_region_table("neighbor")
+	make_region_table(args)
 
