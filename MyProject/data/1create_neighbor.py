@@ -38,6 +38,15 @@ def create_neighbor(args):
 					f_bed.write(text)
 					start += args.neighbor_length
 					end += args.neighbor_length
+			for i in ["X", "Y"]:
+				chr = "chr" + str(i)
+				start = 0
+				end = start + args.neighbor_length
+				while end < length_by_chr[chr]:
+					text = "chr" + i + "\t" + str(start) + "\t" + str(end) + "\n"
+					f_bed.write(text)
+					start += args.neighbor_length
+					end += args.neighbor_length
 
 		# bed -> fasta
 		print("bed -> fasta 開始")

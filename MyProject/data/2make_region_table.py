@@ -90,7 +90,8 @@ def make_region_table(args):
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='各regionタイプ(enhancer, promoter, neighbor)毎のテーブルデータを作成します.')
 	parser.add_argument("-cell_line_list", nargs="+", help="細胞株の名前 (複数選択可能)", default=["GM12878"])
-	parser.add_argument("-region_type_list", nargs="+", default=["enhancer", "promoter", "neighbor"])
+	# parser.add_argument("-region_type_list", nargs="+", default=["enhancer", "promoter", "neighbor"])
+	parser.add_argument("-region_type_list", nargs="+", default=["neighbor"])
 	parser.add_argument("-my_data_folder_path", help="データのルートとなるフォルダパス")
 	parser.add_argument("-neighbor_length", help="neighborの長さ", type=int, default=5000)
 	args = parser.parse_args()

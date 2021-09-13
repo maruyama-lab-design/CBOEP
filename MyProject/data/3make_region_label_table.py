@@ -1,5 +1,6 @@
 import pandas as pd
 from tqdm import tqdm
+import argparse
 
 # メモ ---------
 # argparse を入れて変数、pathを管理した方が良い
@@ -7,10 +8,10 @@ from tqdm import tqdm
 #--------------
 
 
-def make_region_label_table(cl, bin_length):
+def make_region_label_table(args):
 	#-----説明-----
 	# enhancer, promoter それぞれが、どの neighbor 領域に含まれているかを表すテーブルデータを作成する.
-	# 2make_region_table で作られるテーブルデータが必要
+	# 2make_region_table.py で作られるテーブルデータが必要
 
 		# テーブルデータの例
 			#	neighbor_id		chr   	enhancer				promoter
@@ -21,64 +22,92 @@ def make_region_label_table(cl, bin_length):
 			#	:
 
 	#-------------
-	bin_table = pd.read_csv("MyProject/data/table/region/bin/GM12878_bins.csv", usecols=["id", "start", "end"])
-	print(bin_table.head())
-	print(f"周辺領域の幅: {bin_length}")
-	print(f"周辺領域の数: {len(bin_table)}")
 
-	enhancer_table = pd.read_csv("MyProject/data/table/region/enhancer/GM12878_enhancers.csv", usecols=["id", "start", "end"])
-	bin2enhancer_label = [""] * len(bin_table) # key: エンハンサーの番号, value: 周辺領域の番号
+	for cell_line in args.cell_line_list:
+		neighbor_table = pd.read_csv(f"{args.my_data_folder_path}/table/region/neighbor/{cell_line}_neighbors.csv", usecols=["id", "chr", "start", "end"])
+		print(neighbor_table.head())
+		print(f"周辺領域の幅: {args.neighbor_length}")
+		print(f"周辺領域の数: {len(neighbor_table)}")
 
-	for _, data in tqdm(enhancer_table.iterrows()):
-		enhancer_id = data["id"]
-		enhancer_start = data["start"]
-		enhancer_end = data["end"]
+		# enhancer...
+		enhancer_table = pd.read_csv(f"{args.my_data_folder_path}/table/region/enhancer/{cell_line}_enhancers.csv", usecols=["id", "chr", "start", "end"])
+		print(enhancer_table.head())
+		print(f"エンハンサーの数: {len(enhancer_table)}")
 
-		bin_id = enhancer_start // bin_length
-		bin_start = bin_id * bin_length
-		bin_end = bin_start + bin_length
-		target_bin = -1 # 注目エンハンサーと最も重なっている領域番号の初期化
-		now_score = -1 # 注目エンハンサーとどれだけ重なっているかを示す指標
-		while bin_start < enhancer_end:
-			score = min(bin_end, enhancer_end) - max(bin_start, enhancer_start)
-			if now_score < score:
-				score = now_score
-				target_bin = bin_id
-			bin_id += 1
-			bin_start += bin_length
-			bin_end += bin_length
-		bin2enhancer_label[target_bin] += enhancer_id + ","
+		neighbor2enhancer_label = [""] * len(neighbor_table) # index: 周辺領域のindex, value: エンハンサーのid
+		enhancer2neighbor_label = [""] * len(enhancer_table) # index: エンハンサーのindex, value: 周辺領域のid
+		# 染色体番号毎にループ
+		for (n_chr, neighbor_table_by_chr), (e_chr, enhancer_table_by_chr) in zip(neighbor_table.groupby("chr"), enhancer_table.groupby("chr")):
+			if n_chr != e_chr:
+				print("エラー!!!")
+				exit()
+			chr = n_chr
 
-	del enhancer_table
-	
-	promoter_table = pd.read_csv("MyProject/data/table/region/promoter/GM12878_promoters.csv", usecols=["id", "start", "end"])
-	bin2promoter_label = [""] * len(bin_table) # key: プロモーターの番号, value: 周辺領域の番号
+			for _, data in tqdm(enhancer_table_by_chr.iterrows(), total=len(enhancer_table_by_chr), desc=f"[{chr}]"):
 
-	for _, data in tqdm(promoter_table.iterrows()):
-		promoter_id = data["id"]
-		promoter_start = data["start"]
-		promoter_end = data["end"]
-		target_bin = -1 # 注目プロモーターと最も重なっている領域番号の初期化
+				enhancer_id = data["id"]
+				enhancer_start = data["start"]
+				enhancer_end = data["end"]
+				enhancer_center = (enhancer_start + enhancer_end) // 2
 
-		bin_id = promoter_start // bin_length
-		bin_start = bin_id * bin_length
-		bin_end = bin_start + bin_length
-		now_score = -1 # 注目プロモーターとどれだけ重なっているかを示す指標
-		while bin_start < promoter_end:
-			score = min(bin_end, promoter_end) - max(bin_start, promoter_start)
-			if now_score < score:
-				score = now_score
-				target_bin = bin_id
-			bin_id += 1
-			bin_start += bin_length
-			bin_end += bin_length
-		bin2promoter_label[target_bin] += promoter_id + ","
-
-	del promoter_table
-
-	print(bin2enhancer_label[:100])
-	print(bin2promoter_label[:100])
+				target_neighbor_index = enhancer_center // args.neighbor_length
+				target_neighbor_id = neighbor_table_by_chr.iloc[target_neighbor_index]["id"]
+				neighbor2enhancer_label[int(target_neighbor_id.split("_")[1])] += enhancer_id + ","
+				enhancer2neighbor_label[int(enhancer_id.split("_")[1])] = target_neighbor_id
 
 
+		enhancer_label_table = pd.DataFrame({ 'enhancer_id' : list(enhancer_table["id"]),
+								'neighbor_id' : enhancer2neighbor_label,})
+		enhancer_label_table.to_csv(f"{args.my_data_folder_path}/table/label/enhancer/{cell_line}_enhancers.csv") 
 
-make_region_label_table("GM12878", 5000)
+		del enhancer_table
+		del enhancer_label_table
+
+		
+		# promoter...
+		promoter_table = pd.read_csv(f"{args.my_data_folder_path}/table/region/promoter/{cell_line}_promoters.csv", usecols=["id", "chr", "start", "end"])
+		print(promoter_table.head())
+		print(f"プロモーターの数: {len(promoter_table)}")
+
+		neighbor2promoter_label = [""] * len(neighbor_table) # index: 周辺領域のindex, value: プロモーターのid
+		promoter2neighbor_label = [""] * len(promoter_table) # index: プロモーターのindex, value: 周辺領域のid
+		for (n_chr, neighbor_table_by_chr), (p_chr, promoter_table_by_chr) in zip(neighbor_table.groupby("chr"), promoter_table.groupby("chr")):
+			if n_chr != p_chr:
+				print("エラー!!!")
+				exit()
+			chr = n_chr
+
+			for _, data in tqdm(promoter_table_by_chr.iterrows(), total=len(promoter_table_by_chr), desc=f"[{chr}]"):
+				promoter_id = data["id"]
+				promoter_start = data["start"]
+				promoter_end = data["end"]
+				promoter_center = (promoter_start + promoter_end) // 2
+
+				target_neighbor_index = promoter_center // args.neighbor_length
+				target_neighbor_id = neighbor_table_by_chr.iloc[target_neighbor_index]["id"]
+				neighbor2promoter_label[int(target_neighbor_id.split("_")[1])] += promoter_id + ","
+				promoter2neighbor_label[int(promoter_id.split("_")[1])] = target_neighbor_id
+
+
+		promoter_label_table = pd.DataFrame({ 'promoter_id' : list(promoter_table["id"]),
+								'neighbor_id' : promoter2neighbor_label,})
+		promoter_label_table.to_csv(f"{args.my_data_folder_path}/table/label/promoter/{cell_line}_promoters.csv") 
+								
+		del promoter_table
+		del promoter_label_table
+		
+		neighbor_label_table = pd.DataFrame({ 'neighbor_id' : list(neighbor_table["id"]),
+								'enhancer_id' : neighbor2enhancer_label,
+								'promoter_id' : neighbor2promoter_label,})
+		neighbor_label_table.to_csv(f"{args.my_data_folder_path}/table/label/neighbor/{cell_line}_neighbors.csv")            
+
+
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser(description='各regionタイプ(enhancer, promoter, neighbor)毎のテーブルデータを作成します.')
+	parser.add_argument("-cell_line_list", nargs="+", help="細胞株の名前 (複数選択可能)", default=["GM12878"])
+	parser.add_argument("-region_type_list", nargs="+", default=["enhancer", "promoter", "neighbor"])
+	parser.add_argument("-my_data_folder_path", help="データのルートとなるフォルダパス")
+	parser.add_argument("-neighbor_length", help="neighborの長さ", type=int, default=5000)
+	args = parser.parse_args()
+
+	make_region_label_table(args)
