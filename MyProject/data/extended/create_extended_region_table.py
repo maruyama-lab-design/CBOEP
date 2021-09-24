@@ -10,27 +10,6 @@ from gensim.models import Doc2Vec
 # argparse を入れて変数、pathを管理した方が良い
 #--------------
 
-def seq2sentence(k, stride, seq):
-	#-----説明-----
-	# seq(塩基配列) を k-mer に区切り、sentence で返す
-	# 返り値である sentence 内の k-mer 間は空白区切り
-	#-------------
-
-	length = len(seq)
-	sentence = ""
-	start_pos = 0
-	while start_pos <= length - k:
-		# k-merに切る
-		word = seq[start_pos : start_pos + k]
-		
-		# 切り出したk-merを書き込む
-		sentence += word + ' '
-
-		start_pos += stride
-
-	return sentence
-
-
 def make_extended_region_table(args):
 	# -----説明-----
 	# 前提として、全領域の bedfile, fastafile が存在する必要があります.
@@ -40,8 +19,6 @@ def make_extended_region_table(args):
 			#	ENHANCER_34		chr1	235686	235784	0		acgtcdgttcg...
 
 	# -------------
-	tags = []
-	sentences = []
 
 	print(f"全ての エンハンサー 領域について csvファイルを作成します.")
 	# 細胞株毎にループ
@@ -78,10 +55,6 @@ def make_extended_region_table(args):
 			else:
 				n_cnt = fasta_line.count("n")
 				n_cnts.append(n_cnt)
-
-				if n_cnt == 0:
-					tags.append(region_ids[-1])
-					sentences.append(seq2sentence(6, 1, fasta_line))
 
 				id += 1
 
@@ -136,10 +109,6 @@ def make_extended_region_table(args):
 				n_cnt = fasta_line.count("n")
 				n_cnts.append(n_cnt)
 
-				if n_cnt == 0:
-					tags.append(region_ids[-1])
-					sentences.append(seq2sentence(6, 1, fasta_line))
-
 				id += 1
 
 
@@ -156,23 +125,7 @@ def make_extended_region_table(args):
 		promoter_fasta_file.close()
 		print(f"{cell_line} 完了")
 
-		print(f"学習プロセス...")
 		
-		corpus = []
-		for (tag, sentence) in zip(tags, sentences):
-			corpus.append(TaggedDocument(sentence, [tag]))
-
-		model = Doc2Vec(min_count=1, window=10, vector_size=100, sample=1e-4, negative=5, workers=8, epochs=10)
-		model.build_vocab(corpus)
-		model.train(
-			corpus,
-			total_examples=model.corpus_count,
-			epochs=model.epochs
-		)
-		model.save("test.model")
-
-
-
 
 
 
