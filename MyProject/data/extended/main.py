@@ -35,6 +35,22 @@ def make_kmer(k, stride, sequence):
 
 	return sentence
 
+
+def data_download(args, cell_line):
+
+	# enhancer
+	print("エンハンサーをダウンロードします.")
+	os.system(f"wget {args.targetfinder_data_root_url}{cell_line}/output-ep/enhancers.bed -O {args.my_data_folder_path}bed/enhancer/{cell_line}_enhancers.bed")
+
+	# promoter
+	print("プロモーターをダウンロードします.")
+	os.system(f"wget {args.targetfinder_data_root_url}{cell_line}/output-ep/promoters.bed -O {args.my_data_folder_path}bed/promoter/{cell_line}_promoters.bed")
+
+	# reference genome
+	print("リファレンスゲノムをダウンロードします.")
+	os.system(f"wget {args.reference_genome_url} -O {args.my_data_folder_path}reference_genome/hg19.fa.gz")
+
+
 def create_extended_EnhPrm(args, cell_line):
 	print("エンハンサー, プロモーターのbedfileからfastafileを作成します.")
 
@@ -389,14 +405,16 @@ def training_classifier(args, cell_line):
 
 
 if __name__ == '__main__':
-	parser = argparse.ArgumentParser(description="未完成")
+	parser = argparse.ArgumentParser(description="エンハンサー, プロモーターの両端を延長したものに対し, doc2vecを行い,EPIs予測モデルの学習, 評価をする.")
+	parser.add_argument("--targetfinder_data_root_url", help="enhancer,promoterデータをダウンロードする際のtargetfinderのルートurl", default="https://github.com/shwhalen/targetfinder/raw/master/paper/targetfinder/")
+	parser.add_argument("--reference_genome_url", help="reference genome (hg19)をダウンロードする際のurl", default="https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/latest/hg19.fa.gz")
 	parser.add_argument("-cell_line_list", nargs="+", help="細胞株の名前 (複数選択可能)", default=["GM12878"])
 	parser.add_argument("-my_data_folder_path", help="データのルートとなるフォルダパス")
 	parser.add_argument("-neighbor_length", default=5000)
 	parser.add_argument("-E_extended_left_length", type=int, default=100)
 	parser.add_argument("-E_extended_right_length", type=int, default=100)
-	parser.add_argument("-P_extended_left_length", type=int, default=100)
-	parser.add_argument("-P_extended_right_length", type=int, default=100)
+	parser.add_argument("-P_extended_left_length", type=int, default=500)
+	parser.add_argument("-P_extended_right_length", type=int, default=500)
 	parser.add_argument("-embedding_vector_dimention", type=int, default=100)
 	parser.add_argument("-k", type=int, default=6)
 	parser.add_argument("-stride", type=int, default=1)
@@ -404,6 +422,9 @@ if __name__ == '__main__':
 
 
 	for cell_line in args.cell_line_list:
+		# bedfile のダウンロード
+		# data_download(args, cell_line)
+
 		# bedfile から fastafileを作成 
 		create_extended_EnhPrm(args, cell_line)
 
