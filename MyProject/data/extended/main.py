@@ -37,7 +37,6 @@ def make_kmer(k, stride, sequence):
 
 
 def data_download(args, cell_line):
-
 	# enhancer
 	print("エンハンサーをダウンロードします.")
 	os.system(f"wget {args.targetfinder_data_root_url}{cell_line}/output-ep/enhancers.bed -O {args.my_data_folder_path}bed/enhancer/{cell_line}_enhancers.bed")
@@ -52,7 +51,9 @@ def data_download(args, cell_line):
 
 
 def create_extended_EnhPrm(args, cell_line):
-	print("エンハンサー, プロモーターのbedfileからfastafileを作成します.")
+	# -----説明-----
+	# bedファイル を参照し、enhancer, promoter 塩基配列 の切り出し & fasta形式で保存
+	# -------------
 
 	# reference genome
 	reference_genome_path = f"{args.my_data_folder_path}/reference_genome/hg19.fa"
@@ -64,6 +65,9 @@ def create_extended_EnhPrm(args, cell_line):
 	# output fasta
 	extended_enhancer_fasta_path = f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.fa"
 	extended_promoter_fasta_path = f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.fa"
+
+	extended_enhancer_r_fasta_path = f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_r_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.fa"
+	extended_promoter_r_fasta_path = f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_r_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.fa"
 
 	if not os.path.exists(extended_enhancer_bed_path):
 		print("与えられたextendedエンハンサーのbedfileがありません")
@@ -98,23 +102,30 @@ def create_extended_EnhPrm(args, cell_line):
 
 
 	# bedtools で hg19 を bed 切り出し → fasta に保存
-	print("fastafileを作ります")
+	print("bedfileからfastafileを作ります")
 	os.system(f"bedtools getfasta -fi {reference_genome_path} -bed "+ extended_enhancer_bed_path +" -fo "+ extended_enhancer_fasta_path)
 	os.system(f"bedtools getfasta -fi {reference_genome_path} -bed "+ extended_promoter_bed_path +" -fo "+ extended_promoter_fasta_path)
 
 	# 塩基配列を全て小文字へ
 	seqs = ""
+	r_seqs = "" # reverse complement
 	with open(extended_enhancer_fasta_path, "r") as fout:
 		seqs = fout.read()
 	seqs = seqs.replace("A", "a").replace("G", "g").replace("C", "c").replace("T", "t").replace("N", "n")
+	r_seqs = seqs.replace("a", "¥").replace("t", "a").replace("¥", "t").replace("c", "¥").replace("g", "c").replace("¥", "g").replace("ghr", "chr")
 	with open(extended_enhancer_fasta_path, "w") as fout:
 		fout.write(seqs)
+	with open(extended_enhancer_r_fasta_path, "w") as fout:
+		fout.write(r_seqs)
 	
 	with open(extended_promoter_fasta_path, "r") as fout:
 		seqs = fout.read()
 	seqs = seqs.replace("A", "a").replace("G", "g").replace("C", "c").replace("T", "t").replace("N", "n")
+	r_seqs = seqs.replace("a", "¥").replace("t", "a").replace("¥", "t").replace("c", "¥").replace("g", "c").replace("¥", "g").replace("ghr", "chr")
 	with open(extended_promoter_fasta_path, "w") as fout:
 		fout.write(seqs)
+	with open(extended_promoter_r_fasta_path, "w") as fout:
+		fout.write(r_seqs)
 
 
 def make_extended_region_table(args, cell_line):
@@ -230,15 +241,17 @@ def make_extended_enhancer_promoter_model(args, cell_line):
 
 	print("doc2vec のための前処理をします.")
 	tags = [] # doc2vec のための region tag を入れる
-	sentences = [] # 塩基配列を入れる
+	sentences = [] # 塩基配列を入れる (corpus)
 
 	print(f"{cell_line} の エンハンサー 開始")
 	enhancer_fasta_file = open(f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.fa", "r")
+	enhancer_r_fasta_file = open(f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_r_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.fa", "r")
 	fasta_lines = enhancer_fasta_file.readlines()
+	r_fasta_lines = enhancer_r_fasta_file.readlines()
 
 	id = 0
 	enhancers_num = 0
-	for fasta_line in fasta_lines:
+	for (fasta_line, r_fasta_line) in zip(fasta_lines, r_fasta_lines):
 		# ">chr1:17000-18000" のような行はとばす.
 		if fasta_line[0] == ">":
 			continue
@@ -248,19 +261,24 @@ def make_extended_enhancer_promoter_model(args, cell_line):
 			if n_cnt == 0: # "N" を含むような配列は学習に使わない
 				tags.append(tag)
 				sentences.append(make_kmer(args.k, args.stride, fasta_line))
+				tags.append(tag) # reverse complement用に２回
+				sentences.append(make_kmer(args.k, args.stride, r_fasta_line))
 			id += 1
 	enhancer_fasta_file.close()
+	enhancer_r_fasta_file.close()
 	print(f"{cell_line} の エンハンサー 終了")
 	enhancers_num = id
 	print(f"個数 {enhancers_num}")
 
 	print(f"{cell_line} の プロモーター 開始")
 	promoter_fasta_file = open(f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.fa", "r")
+	promoter_r_fasta_file = open(f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_r_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.fa", "r")
 	fasta_lines = promoter_fasta_file.readlines()
+	r_fasta_lines = promoter_r_fasta_file.readlines()
 
 	id = 0
 	promoters_num = 0
-	for fasta_line in fasta_lines:
+	for (fasta_line, r_fasta_line) in zip(fasta_lines, r_fasta_lines):
 		# ">chr1:17000-18000" のような行はとばす.
 		if fasta_line[0] == ">":
 			continue
@@ -270,8 +288,11 @@ def make_extended_enhancer_promoter_model(args, cell_line):
 			if n_cnt == 0: # "N" を含むような配列は学習に使わない
 				tags.append(tag)
 				sentences.append(make_kmer(args.k, args.stride, fasta_line))
+				tags.append(tag)
+				sentences.append(make_kmer(args.k, args.stride, r_fasta_line))
 			id += 1
 	promoter_fasta_file.close()
+	promoter_r_fasta_file.close()
 	print(f"{cell_line} の プロモーター 終了")
 	promoters_num = id
 	print(f"個数 {promoters_num}")
@@ -358,7 +379,7 @@ def training_classifier(args, cell_line):
 
 	arrays = np.zeros((positive_num+negative_num, args.embedding_vector_dimention*2)) # X (従属変数 後に EnhとPrmの embedding vector が入る)
 	labels = np.zeros(positive_num+negative_num) # Y (目的変数 後に ペア情報{0 or 1}が入る)
-	num    = positive_num+negative_num
+	num = positive_num+negative_num
 
 	# 分類器を用意
 	estimator = GradientBoostingClassifier(n_estimators = 4000, learning_rate = 0.001, max_depth = 25, max_features = 'log2', random_state = 0)
@@ -386,22 +407,25 @@ def training_classifier(args, cell_line):
 	print("分類器学習中...")
 	scores = cross_validate(estimator, arrays, labels, scoring = score_funcs, cv = cv, n_jobs = -1)
 
-	# 得られた指標を出力する
-	print('f1:', scores['test_f1'].mean())
+	# 得られた指標を出力する & 結果の記録
+	print('F1:', scores['test_f1'].mean())
 	print('auROC:', scores['test_roc_auc'].mean())
 	print('auPRC:', scores['test_average_precision'].mean())
 	f1 = scores['test_f1']
+	f1 = np.append(f1, scores['test_f1'].mean())
 	auROC = scores['test_roc_auc']
+	auROC = np.append(auROC, scores['test_roc_auc'].mean())
 	auPRC =  scores['test_average_precision']
+	auPRC = np.append(auPRC, scores['test_average_precision'].mean())
 	result = pd.DataFrame(
 		{
-		"f1": f1,
+		"F1": f1,
 		"auROC": auROC,
 		"auPRC": auPRC,
 		},
-		index = ["1-fold", "2-fold", "3-fold", "4-fold", "5-fold", "6-fold", "7-fold", "8-fold", "9-fold", "10-fold"]	
+		index = ["1-fold", "2-fold", "3-fold", "4-fold", "5-fold", "6-fold", "7-fold", "8-fold", "9-fold", "10-fold", "mean"]	
 	)
-	result.to_csv(f"{args.my_data_folder_path}/result/{cell_line}_enhancer_{args.E_extended_left_length}_{args.E_extended_right_length}_promoter_{args.P_extended_left_length}_{args.P_extended_right_length}.csv")
+	result.to_csv(f"{args.my_data_folder_path}/result/r_{cell_line}_enhancer_{args.E_extended_left_length}_{args.E_extended_right_length}_promoter_{args.P_extended_left_length}_{args.P_extended_right_length}.csv")
 
 
 if __name__ == '__main__':
@@ -411,32 +435,42 @@ if __name__ == '__main__':
 	parser.add_argument("-cell_line_list", nargs="+", help="細胞株の名前 (複数選択可能)", default=["GM12878"])
 	parser.add_argument("-my_data_folder_path", help="データのルートとなるフォルダパス")
 	parser.add_argument("-neighbor_length", default=5000)
-	parser.add_argument("-E_extended_left_length", type=int, default=100)
-	parser.add_argument("-E_extended_right_length", type=int, default=100)
-	parser.add_argument("-P_extended_left_length", type=int, default=500)
-	parser.add_argument("-P_extended_right_length", type=int, default=500)
+	parser.add_argument("-E_extended_left_length", type=int, default=0)
+	parser.add_argument("-E_extended_right_length", type=int, default=0)
+	parser.add_argument("-P_extended_left_length", type=int, default=0)
+	parser.add_argument("-P_extended_right_length", type=int, default=0)
 	parser.add_argument("-embedding_vector_dimention", type=int, default=100)
 	parser.add_argument("-k", type=int, default=6)
 	parser.add_argument("-stride", type=int, default=1)
 	args = parser.parse_args()
 
+	candidate = [0, 100, 500, 1000, 5000]
 
 	for cell_line in args.cell_line_list:
 		# bedfile のダウンロード
 		# data_download(args, cell_line)
 
-		# bedfile から fastafileを作成 
-		create_extended_EnhPrm(args, cell_line)
+		for pl in candidate:
+			for pr in candidate:
+				output = f"/Users/ylwrvr/卒論/Koga_code/MyProject/data/result/r_{cell_line}_enhancer_{args.E_extended_left_length}_{args.E_extended_right_length}_promoter_{pl}_{pr}.csv"
+				if os.path.exists(output):
+					print(f"{pl} {pr} スキップ")
+					continue
+				args.P_extended_left_length = pl
+				args.P_extended_right_length = pr
 
-		# enhancerとpromoterのtableデータを作成
-		make_extended_region_table(args, cell_line)
+				# bedfile から fastafileを作成 
+				create_extended_EnhPrm(args, cell_line)
 
-		# doc2vec
-		make_extended_enhancer_promoter_model(args, cell_line)
+				# enhancerとpromoterのtableデータを作成
+				make_extended_region_table(args, cell_line)
 
-		# 分類器作成のためのトレーニングデータ情報を作成
-		make_training_txt(args, cell_line)
+				# doc2vec
+				make_extended_enhancer_promoter_model(args, cell_line)
 
-		# 分類器学習, 評価
-		training_classifier(args, cell_line)
+				# 分類器作成のためのトレーニングデータ情報を作成
+				make_training_txt(args, cell_line)
+
+				# 分類器学習, 評価, 結果をresultへ記録
+				training_classifier(args, cell_line)
 
