@@ -12,9 +12,11 @@
             "console": "integratedTerminal",
             "args":
             [
-                "-cell_line_list", "GM12878",
                 "-my_data_folder_path", "/Users/ylwrvr/卒論/Koga_code/MyProject/data",
-                 "-neighbor_length", "5000",
+                "--cell_line_list", "K562",
+                "--make_directory",
+                // "--download_reference_genome",
+                "--share_doc2vec"
             ],
         }
     ]
