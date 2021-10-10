@@ -30,18 +30,20 @@ def make_training_txt(args, cell_line):
 	negative_num = 0
 	
 	# 前工程で作ったcsvを読み込む
-	enhancer_table = pd.read_csv(f"{args.my_data_folder_path}/table/region/enhancer/{cell_line}_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.csv", usecols=["name", "tag"])
-	promoter_table = pd.read_csv(f"{args.my_data_folder_path}/table/region/promoter/{cell_line}_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.csv", usecols=["name", "tag"])
+	enhancer_table = pd.read_csv(f"{args.my_data_folder_path}/table/region/enhancer/{cell_line}_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.csv", usecols=["name", "tag", "n_cnt"])
+	promoter_table = pd.read_csv(f"{args.my_data_folder_path}/table/region/promoter/{cell_line}_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.csv", usecols=["name", "tag", "n_cnt"])
 
 	if not os.path.isfile(f"{args.my_data_folder_path}/train/{cell_line}_train.csv"):
 		print("トレーニングデータが見つかりません. ダウンロードします.") # ep2vecよりダウンロード
-		os.system(f"wget https://raw.githubusercontent.com/wanwenzeng/ep2vec/master/{cell_line}rain.csv -O {args.my_data_folder_path}/train/{cell_line}_train.csv")
+		os.system(f"wget https://raw.githubusercontent.com/wanwenzeng/ep2vec/master/{cell_line}train.csv -O {args.my_data_folder_path}/train/{cell_line}_train.csv")
 	train_csv = pd.read_csv(f"{args.my_data_folder_path}/train/{cell_line}_train.csv", usecols=["bin", "enhancer_name", "promoter_name", "label"])
 
 	enhancer_names = enhancer_table["name"].to_list()
 	enhancer_tags = enhancer_table["tag"].to_list()
 	promoter_names = promoter_table["name"].to_list()
 	promoter_tags = promoter_table["tag"].to_list()
+	enhancer_n_cnts = enhancer_table["n_cnt"].to_list()
+	promoter_n_cnts = promoter_table["n_cnt"].to_list()
 
 	# ペア情報を training.txt にメモ
 	fout = open('training.txt','w')
@@ -61,11 +63,20 @@ def make_training_txt(args, cell_line):
 		enhancer_tag = "nan" # 初期化
 		promoter_tag = "nan" # 初期化
 		if train_enhancer_name in enhancer_names:
-			enhancer_tag = enhancer_tags[enhancer_names.index(train_enhancer_name)] # トレーニングデータのenhancer名から何番目のenhancerであるかを調べる
+			index = enhancer_names.index(train_enhancer_name) # トレーニングデータのenhancer名から何番目のenhancerであるかを調べる
+			if enhancer_n_cnts[index] > 0: # nを含むものを学習データからはずす
+				continue
+			enhancer_tag = enhancer_tags[index]
+
 		if train_promoter_name in promoter_names:
-			promoter_tag = promoter_tags[promoter_names.index(train_promoter_name)] # トレーニングデータのpromoter名から何番目のpromoterであるかを調べる
+			index = promoter_names.index(train_promoter_name)  # トレーニングデータのpromoter名から何番目のpromoterであるかを調べる
+			if promoter_n_cnts[index] > 0: # nを含むものを学習データからはずす
+				continue
+			promoter_tag = promoter_tags[index]
+
 		if enhancer_tag == "nan" or promoter_tag == "nan": 
 			continue
+		
 		label = str(data["label"])
 
 		# enhancer の ~ 番目と promoter の ~ 番目 は pair/non-pair であるというメモを書き込む
