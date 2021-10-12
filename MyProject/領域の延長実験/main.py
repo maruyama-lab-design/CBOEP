@@ -21,6 +21,9 @@ import my_doc2vec
 import train_classifier
 
 
+### def func(args):
+
+
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="エンハンサー, プロモーターの両端を延長したものに対し, doc2vecを行い,EPIs予測モデルの学習, 評価をする.")
@@ -41,6 +44,10 @@ if __name__ == '__main__':
 	parser.add_argument("--share_doc2vec", action="store_true", help="エンハンサーとプロモーターを一つのdoc2vecに共存させるか")
 	args = parser.parse_args()
 
+	### Make the remaining part as a function like def func(args), and put it above. 
+
+	### save the contents of args to a log file.
+
 	# 必要なディレクトリの作成
 	if args.make_directory:
 		make_directory(args)
@@ -52,10 +59,12 @@ if __name__ == '__main__':
 
 	for cell_line in args.cell_line_list: # 細胞株毎のループ
 
+		### It would be better to make this part as a function. 
+
 		# エンハンサープロモーターのダウンロード
 		data_download.download_enhancer_and_promoter(args, cell_line)
 
-		pl_list = [0]
+		pl_list = [0] # 意味が分かる変数名にしてほしい．
 		pr_list = [0]
 		el_list = [0]
 		er_list = [0]
@@ -70,7 +79,7 @@ if __name__ == '__main__':
 				print(f"{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)} スキップ")
 				continue
 			
-			data_processing(args, cell_line)
+			data_processing(args, cell_line) ### どのようなプロセスかが分かる関数名がいいです．
 
 			# doc2vec
 			if args.share_doc2vec:
