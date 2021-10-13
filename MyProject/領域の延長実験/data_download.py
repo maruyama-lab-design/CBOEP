@@ -29,3 +29,4 @@ def download_reference_genome(args):
 	os.system(f"wget {args.reference_genome_url} -O {args.my_data_folder_path}/reference_genome/hg19.fa.gz")
 	print("解凍...")
 	os.system(f"gunzip -f {args.my_data_folder_path}/reference_genome/hg19.fa.gz")
+	

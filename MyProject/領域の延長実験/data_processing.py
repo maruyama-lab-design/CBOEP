@@ -195,6 +195,6 @@ def make_extended_region_table(args, cell_line):
 	promoter_fasta_file.close()
 	print(f"プロモーターの領域情報をcsvファイルにて保存完了")
 
-def data_processing(args, cell_line):
+def create_region_bedfile_and_table(args, cell_line):
     create_extended_EnhPrm(args, cell_line)
     make_extended_region_table(args, cell_line)

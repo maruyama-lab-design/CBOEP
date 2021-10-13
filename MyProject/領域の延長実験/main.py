@@ -16,13 +16,58 @@ from sklearn.ensemble import GradientBoostingClassifier
 # 自作関数
 from make_dirictory import make_directory
 import data_download
-from data_processing import data_processing
+from data_processing import create_region_bedfile_and_table
 import my_doc2vec
 import train_classifier
+from make_args_logfile import make_args_logfile
 
 
-### def func(args):
+def my_project(args):
 
+	# 必要なディレクトリの作成
+	if args.make_directory:
+		make_directory(args)
+
+	# リファレンスゲノムのダウンロード
+	if args.download_reference_genome:
+		data_download.download_reference_genome(args)
+
+	promoter_left_length_list = [0, 1000] # 意味が分かる変数名にしてほしい．
+	promoter_right_length_list = [0]
+	enhancer_left_length_list = [0]
+	enhancer_right_length_list = [0]
+
+	for cell_line in args.cell_line_list: # 細胞株毎のループ
+
+		### It would be better to make this part as a function. 
+
+		# エンハンサープロモーターのダウンロード
+		data_download.download_enhancer_and_promoter(args, cell_line)
+
+		for (enhancer_left_length, enhancer_right_length, promoter_left_length, promoter_right_length) in list(itertools.product(enhancer_left_length_list, enhancer_right_length_list, promoter_left_length_list, promoter_right_length_list)): # 組み合わせ全列挙
+
+			args.E_extended_left_length = enhancer_left_length
+			args.E_extended_right_length = enhancer_right_length
+			args.P_extended_left_length = promoter_left_length
+			args.P_extended_right_length = promoter_right_length
+
+			output = f"{args.my_data_folder_path}/result/{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)}.csv"
+			if os.path.exists(output): # 存在してたらスキップ
+				print(f"{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)} スキップ")
+				continue
+			
+			create_region_bedfile_and_table(args, cell_line) ### どのようなプロセスかが分かる関数名がいいです．
+
+			# doc2vec
+			if args.share_doc2vec:
+				my_doc2vec.make_paragraph_vector_from_enhancer_and_promoter(args, cell_line)
+			else:
+				my_doc2vec.make_paragraph_vector_from_enhancer_only(args, cell_line)
+				my_doc2vec.make_paragraph_vector_from_promoter_only(args, cell_line)
+
+			train_classifier.train(args, cell_line)
+
+			make_args_logfile(args)
 
 
 if __name__ == '__main__':
@@ -30,7 +75,6 @@ if __name__ == '__main__':
 	parser.add_argument("--targetfinder_data_root_url", help="enhancer,promoterデータをダウンロードする際のtargetfinderのルートurl", default="https://github.com/shwhalen/targetfinder/raw/master/paper/targetfinder/")
 	parser.add_argument("--reference_genome_url", help="reference genome (hg19)をダウンロードする際のurl", default="https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/latest/hg19.fa.gz")
 	parser.add_argument("--cell_line_list", nargs="+", help="細胞株の名前 (複数選択可能)", default=["K562"])
-	parser.add_argument("--neighbor_length", default=5000)
 	parser.add_argument("-el", "--E_extended_left_length", type=int, default=0, help="エンハンサーの上流をどれだけ伸ばすか")
 	parser.add_argument("-er", "--E_extended_right_length", type=int, default=0, help="エンハンサーの下流をどれだけ伸ばすか")
 	parser.add_argument("-pl", "--P_extended_left_length", type=int, default=0, help="プロモーターの上流をどれだけ伸ばすか")
@@ -45,48 +89,9 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	### Make the remaining part as a function like def func(args), and put it above. 
+	my_project(args)
 
 	### save the contents of args to a log file.
 
-	# 必要なディレクトリの作成
-	if args.make_directory:
-		make_directory(args)
 
-	# リファレンスゲノムのダウンロード
-	if args.download_reference_genome:
-		data_download.download_reference_genome(args)
-
-
-	for cell_line in args.cell_line_list: # 細胞株毎のループ
-
-		### It would be better to make this part as a function. 
-
-		# エンハンサープロモーターのダウンロード
-		data_download.download_enhancer_and_promoter(args, cell_line)
-
-		pl_list = [0] # 意味が分かる変数名にしてほしい．
-		pr_list = [0]
-		el_list = [0]
-		er_list = [0]
-		for (el, er, pl, pr) in list(itertools.product(el_list, er_list, pl_list, pr_list)): # 組み合わせ全列挙
-			args.E_extended_left_length = el
-			args.E_extended_right_length = er
-			args.P_extended_left_length = pl
-			args.P_extended_right_length = pr
-
-			output = f"{args.my_data_folder_path}/result/{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)}.csv"
-			if os.path.exists(output): # 存在してたらスキップ
-				print(f"{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)} スキップ")
-				continue
-			
-			data_processing(args, cell_line) ### どのようなプロセスかが分かる関数名がいいです．
-
-			# doc2vec
-			if args.share_doc2vec:
-				my_doc2vec.make_paragraph_vector_from_enhancer_and_promoter(args, cell_line)
-			else:
-				my_doc2vec.make_paragraph_vector_from_enhancer_only(args, cell_line)
-				my_doc2vec.make_paragraph_vector_from_promoter_only(args, cell_line)
-
-			train_classifier.train(args, cell_line)
 
