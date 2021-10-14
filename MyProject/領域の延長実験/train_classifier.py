@@ -7,11 +7,15 @@ import itertools
 
 import os
 import argparse
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
 
 # classifier
 from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import GradientBoostingClassifier
+
+from t_sne import t_SNE
 
 
 def make_training_txt(args, cell_line):
@@ -76,7 +80,7 @@ def make_training_txt(args, cell_line):
 
 		if enhancer_tag == "nan" or promoter_tag == "nan": 
 			continue
-		
+
 		label = str(data["label"])
 
 		# enhancer の ~ 番目と promoter の ~ 番目 は pair/non-pair であるというメモを書き込む
@@ -166,4 +170,7 @@ def train(args, cell_line):
 		},
 		index = ["1-fold", "2-fold", "3-fold", "4-fold", "5-fold", "6-fold", "7-fold", "8-fold", "9-fold", "10-fold", "mean"]	
 	)
-	result.to_csv(f"{args.my_data_folder_path}/result/{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)}.csv")
+	result.to_csv(f"{args.my_data_folder_path}/result/{args.output}.csv")
+
+	# t_sne
+	t_SNE(args, cell_line, arrays, labels)

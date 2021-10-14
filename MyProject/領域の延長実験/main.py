@@ -10,6 +10,9 @@ import argparse
 
 import datetime
 
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
+
 # classifier
 from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.neighbors import KNeighborsClassifier
@@ -23,7 +26,7 @@ import my_doc2vec
 import train_classifier
 from make_args_logfile import make_args_logfile
 
-from data_processing import create_promoter_bedfile_divided_from_tss
+# from data_processing import create_promoter_bedfile_divided_from_tss
 
 
 def my_project(args):
@@ -55,9 +58,9 @@ def my_project(args):
 			args.P_extended_left_length = promoter_left_length
 			args.P_extended_right_length = promoter_right_length
 
-			output = f"{args.my_data_folder_path}/result/{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)},kmer={args.way_of_kmer}.csv"
-			if os.path.exists(output): # 存在してたらスキップ
-				print(f"{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)} スキップ")
+			args.output = f"{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)},kmer={args.way_of_kmer}"
+			if os.path.exists(args.output): # 存在してたらスキップ
+				print(args.output + " スキップ")
 				continue
 			
 			create_region_sequence_and_table(args, cell_line) ### どのようなプロセスかが分かる関数名がいいです．
@@ -105,6 +108,7 @@ if __name__ == '__main__':
 	parser.add_argument("--stage1_end_time", type=str, help="doc2vec終了時間")
 	parser.add_argument("--stage2_start_time", type=str, help="分類期学習開始時間")
 	parser.add_argument("--stage2_end_time", type=str, help="分類期学習終了時間")
+	parser.add_argument("--output")
 	args = parser.parse_args()
 
 	args.way_of_kmer = "random"

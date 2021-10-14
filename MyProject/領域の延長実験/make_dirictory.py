@@ -11,6 +11,10 @@ def make_directory(args):
     os.system(f"mkdir -p {args.my_data_folder_path}/table/region/enhancer")
     os.system(f"mkdir -p {args.my_data_folder_path}/table/region/promoter")
 
+    os.system(f"mkdir -p {args.my_data_folder_path}/reference_genome")
+
+    os.system(f"mkdir -p {args.my_data_folder_path}/figure")
+
     os.system(f"mkdir -p {args.my_data_folder_path}/model")
 
     os.system(f"mkdir -p {args.my_data_folder_path}/result")
