@@ -14,7 +14,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 
 # 自作関数
-from utils import make_kmer_list
+import utils
 
 
 def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
@@ -39,10 +39,17 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 			tag = "ENHANCER_" + str(enhancer_id)
 			n_cnt = fasta_line.count("n")
 			if n_cnt == 0: # "N" を含むような配列は学習に使わない
-				tags.append(tag)
-				sentences.append(make_kmer_list(args.k, args.stride, fasta_line))
-				tags.append(tag) # reverse complement用に２回
-				sentences.append(make_kmer_list(args.k, args.stride, reverse_fasta_line))
+				if args.way_of_kmer == "normal":
+					tags.append(tag)
+					sentences.append(utils.make_kmer_list(args.k, args.stride, fasta_line))
+					tags.append(tag) # reverse complement用に２回
+					sentences.append(utils.make_kmer_list(args.k, args.stride, reverse_fasta_line))
+				if args.way_of_kmer == "random":
+					for _ in range(args.sentence_cnt):
+						tags.append(tag)
+						sentences.append(utils.make_random_kmer_list(args.k_min, args.k_max, fasta_line))
+						tags.append(tag) # reverse complement用に２回
+						sentences.append(utils.make_random_kmer_list(args.k_min, args.k_max, reverse_fasta_line))
 			enhancer_id += 1
 
 	enhancer_fasta_file.close()
@@ -65,10 +72,17 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 			tag = "PROMOTER_" + str(promoter_id)
 			n_cnt = fasta_line.count("n")
 			if n_cnt == 0: # "N" を含むような配列は学習に使わない
-				tags.append(tag)
-				sentences.append(make_kmer_list(args.k, args.stride, fasta_line))
-				tags.append(tag)
-				sentences.append(make_kmer_list(args.k, args.stride, reverse_fasta_line))
+				if args.way_of_kmer == "normal":
+					tags.append(tag)
+					sentences.append(utils.make_kmer_list(args.k, args.stride, fasta_line))
+					tags.append(tag) # reverse complement用に２回
+					sentences.append(utils.make_kmer_list(args.k, args.stride, reverse_fasta_line))
+				if args.way_of_kmer == "random":
+					for _ in range(args.sentence_cnt):
+						tags.append(tag)
+						sentences.append(utils.make_random_kmer_list(args.k_min, args.k_max, fasta_line))
+						tags.append(tag) # reverse complement用に２回
+						sentences.append(utils.make_random_kmer_list(args.k_min, args.k_max, reverse_fasta_line))
 			promoter_id += 1
 
 	promoter_fasta_file.close()
@@ -113,10 +127,17 @@ def make_paragraph_vector_from_enhancer_only(args, cell_line):
 			tag = "ENHANCER_" + str(enhancer_id)
 			n_cnt = fasta_line.count("n")
 			if n_cnt == 0: # "N" を含むような配列は学習に使わない
-				tags.append(tag)
-				sentences.append(make_kmer_list(args.k, args.stride, fasta_line))
-				tags.append(tag) # reverse complement用に２回
-				sentences.append(make_kmer_list(args.k, args.stride, reverse_fasta_line))
+				if args.way_of_kmer == "normal":
+					tags.append(tag)
+					sentences.append(utils.make_kmer_list(args.k, args.stride, fasta_line))
+					tags.append(tag) # reverse complement用に２回
+					sentences.append(utils.make_kmer_list(args.k, args.stride, reverse_fasta_line))
+				if args.way_of_kmer == "random":
+					for _ in range(args.sentence_cnt):
+						tags.append(tag)
+						sentences.append(utils.make_random_kmer_list(args.k_min, args.k_max, fasta_line))
+						tags.append(tag) # reverse complement用に２回
+						sentences.append(utils.make_random_kmer_list(args.k_min, args.k_max, reverse_fasta_line))
 			enhancer_id += 1
 
 	enhancer_fasta_file.close()
@@ -160,10 +181,17 @@ def make_paragraph_vector_from_promoter_only(args, cell_line):
 			tag = "PROMOTER_" + str(promoter_id)
 			n_cnt = fasta_line.count("n")
 			if n_cnt == 0: # "N" を含むような配列は学習に使わない
-				tags.append(tag)
-				sentences.append(make_kmer_list(args.k, args.stride, fasta_line))
-				tags.append(tag)
-				sentences.append(make_kmer_list(args.k, args.stride, reverse_fasta_line))
+				if args.way_of_kmer == "normal":
+					tags.append(tag)
+					sentences.append(utils.make_kmer_list(args.k, args.stride, fasta_line))
+					tags.append(tag) # reverse complement用に２回
+					sentences.append(utils.make_kmer_list(args.k, args.stride, reverse_fasta_line))
+				if args.way_of_kmer == "random":
+					for _ in range(args.sentence_cnt):
+						tags.append(tag)
+						sentences.append(utils.make_random_kmer_list(args.k_min, args.k_max, fasta_line))
+						tags.append(tag) # reverse complement用に２回
+						sentences.append(utils.make_random_kmer_list(args.k_min, args.k_max, reverse_fasta_line))
 			promoter_id += 1
 
 	promoter_fasta_file.close()

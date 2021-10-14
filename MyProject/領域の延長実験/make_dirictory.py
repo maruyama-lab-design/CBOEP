@@ -3,6 +3,7 @@ import os
 def make_directory(args):
     os.system(f"mkdir -p {args.my_data_folder_path}/bed/enhancer")
     os.system(f"mkdir -p {args.my_data_folder_path}/bed/promoter")
+    os.system(f"mkdir -p {args.my_data_folder_path}/bed/tss")
 
     os.system(f"mkdir -p {args.my_data_folder_path}/fasta/enhancer")
     os.system(f"mkdir -p {args.my_data_folder_path}/fasta/promoter")

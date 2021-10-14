@@ -14,7 +14,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 
 
-def create_extended_EnhPrm(args, cell_line):
+def create_region_sequence(args, cell_line):
 	# -----説明-----
 	# bedファイル を参照し、enhancer, promoter 塩基配列 の切り出し & fasta形式で保存
 	# -------------
@@ -26,15 +26,16 @@ def create_extended_EnhPrm(args, cell_line):
 	extended_enhancer_bed_path = f"{args.my_data_folder_path}/bed/enhancer/{cell_line}_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.bed"
 	extended_promoter_bed_path = f"{args.my_data_folder_path}/bed/promoter/{cell_line}_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.bed"
 
-	# output fasta
+	# output fasta (forward)
 	extended_enhancer_fasta_path = f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.fa"
 	extended_promoter_fasta_path = f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.fa"
 
+	# output fasta (reverse)
 	extended_enhancer_r_fasta_path = f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_r_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.fa"
 	extended_promoter_r_fasta_path = f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_r_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.fa"
 
 	if not os.path.exists(extended_enhancer_bed_path):
-		print("与えられたextendedエンハンサーのbedfileがありません")
+		print("与えられたエンハンサーのbedfileがありません")
 		print("オリジナルのエンハンサーのbedfileから作成します...")
 		text = ""
 		with open(f"{args.my_data_folder_path}/bed/enhancer/{cell_line}_enhancers.bed", "r") as origin_bed:
@@ -49,7 +50,7 @@ def create_extended_EnhPrm(args, cell_line):
 		with open(extended_enhancer_bed_path, "w") as extended_bed:
 			extended_bed.write(text)
 	if not os.path.exists(extended_promoter_bed_path):
-		print("与えられたextendedプロモーターのbedfileがありません")
+		print("与えられたプロモーターのbedfileがありません")
 		print("オリジナルのプロモーターのbedfileから作成します...")
 		text = ""
 		with open(f"{args.my_data_folder_path}/bed/promoter/{cell_line}_promoters.bed", "r") as origin_bed:
@@ -93,7 +94,7 @@ def create_extended_EnhPrm(args, cell_line):
 		fout.write(reverse_seqs)
 
 
-def make_extended_region_table(args, cell_line):
+def make_region_table(args, cell_line):
 	# -----説明-----
 	# 前提として、全領域の bedfile, fastafile が存在する必要があります.
 
@@ -195,6 +196,55 @@ def make_extended_region_table(args, cell_line):
 	promoter_fasta_file.close()
 	print(f"プロモーターの領域情報をcsvファイルにて保存完了")
 
-def create_region_bedfile_and_table(args, cell_line):
-    create_extended_EnhPrm(args, cell_line)
-    make_extended_region_table(args, cell_line)
+
+def create_promoter_bedfile_divided_from_tss(args, cell_line):
+	print("tssデータをダウンロード...")
+	os.system(f"wget {args.targetfinder_data_root_url}/{cell_line}/output-ep/tss.bed -O {args.my_data_folder_path}/bed/tss/{cell_line}_tss.bed")
+	print("ダウンロードしたtssのbedfileを編集")
+	tss_bed_table = pd.read_csv(
+		f"{args.my_data_folder_path}/bed/tss/{cell_line}_tss.bed",
+		sep="\t",
+		header = None,
+		usecols=[0, 1]
+	)
+	tss_bed_table.columns = ["chr", "pos"]
+	tss_bed_table["pos"] = tss_bed_table["pos"].astype(int)
+
+	promoter_bed_table = pd.read_csv(
+		f"{args.my_data_folder_path}/bed/promoter/{cell_line}_promoters.bed",
+		sep="\t",
+		header = None,
+	)
+	promoter_bed_table.columns = ['chr', 'start', 'end', 'name']
+	promoter_bed_table["start"] = promoter_bed_table["start"].astype(int)
+	promoter_bed_table["end"] = promoter_bed_table["end"].astype(int)
+
+	drop_indexes = []
+	new_tss_bed_txt = ""
+	for index, tss_data in tss_bed_table.iterrows():
+		now_chr = tss_data["chr"]
+		now_tss_pos = tss_data["pos"]
+		if len(promoter_bed_table[(promoter_bed_table["chr"] == now_chr) & (promoter_bed_table["start"] < now_tss_pos) & (now_tss_pos < promoter_bed_table["end"])]) == 0:
+			drop_indexes.append(index)
+		elif len(promoter_bed_table[(promoter_bed_table["chr"] == now_chr) & (promoter_bed_table["start"] < now_tss_pos) & (now_tss_pos < promoter_bed_table["end"])]) == 1:
+			promoter_name = promoter_bed_table[(promoter_bed_table["chr"] == now_chr) & (promoter_bed_table["start"] < now_tss_pos) & (now_tss_pos < promoter_bed_table["end"])]["name"]
+			new_tss_bed_txt += str(now_chr) + "\t" + str(now_tss_pos) + "\t" + str(now_tss_pos) + "\t" + str(promoter_name) + "\n"
+		else:
+			print("error")
+			exit()
+
+
+	tss_bed_table = tss_bed_table.drop(tss_bed_table.index[drop_indexes])
+	with open("test.txt", "w") as f:
+		f.write(new_tss_bed_txt)
+
+	print(len(tss_bed_table))
+	print(len(promoter_bed_table))
+
+
+	# promoter_divided_from_tss_bedfile = open("")
+
+
+def create_region_sequence_and_table(args, cell_line):
+	create_region_sequence(args, cell_line)
+	make_region_table(args, cell_line)
