@@ -1,0 +1,4 @@
+MyProject/data
+MyProject/test
+*.pyc
+*.txt

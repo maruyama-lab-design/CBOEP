@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
+import pandas as pd
 from sklearn.manifold import TSNE
+import argparse
 
 
 def t_SNE(args, cell_line, X, Y):
@@ -7,11 +9,10 @@ def t_SNE(args, cell_line, X, Y):
 	X_reduced = tsne.fit_transform(X)
 
 	figure = plt.figure()
-	plt.figure(figsize=(13, 7))
-	plt.scatter(X_reduced[:, 0], X_reduced[:, 1],
-				c=Y, cmap='jet',
-				s=15, alpha=0.5)
-	plt.axis('off')
-	plt.colorbar()
+	df = pd.DataFrame(dict(x=X_reduced[:, 0], y=X_reduced[:, 1], label=Y))
+	groups = df.groupby("label")
+	for name, group in groups:
+		plt.plot(group.x, group.y, marker="o", linestyle="None", ms=4, label=name)
+	plt.legend()
 	# plt.show()
 	figure.savefig(f"{args.my_data_folder_path}/figure/{args.output}.png")

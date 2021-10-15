@@ -111,7 +111,7 @@ if __name__ == '__main__':
 	parser.add_argument("--output")
 	args = parser.parse_args()
 
-	args.way_of_kmer = "random"
+	args.way_of_kmer = "normal"
 
 	### Make the remaining part as a function like def func(args), and put it above. 
 	my_project(args)
