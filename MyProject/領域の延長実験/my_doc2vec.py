@@ -45,7 +45,7 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 					tags.append(tag) # reverse complement用に２回
 					sentences.append(utils.make_kmer_list(args.k, args.stride, reverse_fasta_line))
 				if args.way_of_kmer == "random":
-					for _ in range(args.sentence_cnt):
+					for _ in range(args.sentence_cnt): # make N random k-mer sentence
 						tags.append(tag)
 						sentences.append(utils.make_random_kmer_list(args.k_min, args.k_max, fasta_line))
 						tags.append(tag) # reverse complement用に２回
@@ -55,7 +55,7 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 	enhancer_fasta_file.close()
 	enhancer_reverse_fasta_file.close()
 	print(f"{cell_line} の エンハンサー 終了")
-	enhancer_cnt = len(sentences)
+	enhancer_cnt = len(sentences) // (2 * args.sentence_cnt)
 	print(f"エンハンサーの個数 {enhancer_cnt}")
 
 	print(f"{cell_line} の プロモーター...")
@@ -88,7 +88,7 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 	promoter_fasta_file.close()
 	promoter_reverse_fasta_file.close()
 	print(f"{cell_line} の プロモーター 終了")
-	print(f"プロモーターの個数 {len(sentences) - enhancer_cnt}")
+	print(f"プロモーターの個数 {(len(sentences) // (2 * args.sentence_cnt)) - enhancer_cnt}")
 
 	# _____________________________________
 	corpus = []
@@ -97,7 +97,7 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 
 	print(f"doc2vec 学習...")
 	model = Doc2Vec(min_count=1, window=10, vector_size=args.embedding_vector_dimention, sample=1e-4, negative=5, workers=8, epochs=10)
-	model.build_vocab(corpus)
+	model.build_vocab(corpus) # 単語の登録
 	model.train(
 		corpus,
 		total_examples=model.corpus_count,
@@ -143,7 +143,7 @@ def make_paragraph_vector_from_enhancer_only(args, cell_line):
 	enhancer_fasta_file.close()
 	enhancer_reverse_fasta_file.close()
 	print(f"{cell_line} の エンハンサー 終了")
-	print(f"エンハンサーの個数 {len(sentences)}")
+	print(f"エンハンサーの個数 {len(sentences) // (2 * args.sentence_cnt)}")
 	# _____________________________________
 	corpus = []
 	for (tag, sentence) in zip(tags, sentences):
@@ -197,7 +197,7 @@ def make_paragraph_vector_from_promoter_only(args, cell_line):
 	promoter_fasta_file.close()
 	promoter_reverse_fasta_file.close()
 	print(f"{cell_line} の プロモーター 終了")
-	print(f"プロモーターの個数 {len(sentences)}")
+	print(f"プロモーターの個数 {len(sentences) // (2 * args.sentence_cnt)}")
 
 	# _____________________________________
 	corpus = []

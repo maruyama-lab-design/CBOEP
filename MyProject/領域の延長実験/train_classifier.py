@@ -55,41 +55,38 @@ def make_training_txt(args, cell_line):
 
 		# 自分で作ったcsvの領域情報には領域を伸ばした後locationが書かれているので戻す
 		train_enhancer_name = data["enhancer_name"].split("|")[1]
-		chr, enhancer_range = train_enhancer_name.split(":")[0], train_enhancer_name.split(":")[1]
-		train_enhancer_start, train_enhancer_end = int(enhancer_range.split("-")[0]) - args.E_extended_left_length, int(enhancer_range.split("-")[1]) + args.E_extended_right_length
-		train_enhancer_name = chr + ":" + str(train_enhancer_start) + "-" + str(train_enhancer_end)
+		# chr, enhancer_range = train_enhancer_name.split(":")[0], train_enhancer_name.split(":")[1]
+		# train_enhancer_start, train_enhancer_end = int(enhancer_range.split("-")[0]) - args.E_extended_left_length, int(enhancer_range.split("-")[1]) + args.E_extended_right_length
+		# train_enhancer_name = chr + ":" + str(train_enhancer_start) + "-" + str(train_enhancer_end)
 
 		train_promoter_name = data["promoter_name"].split("|")[1]
-		chr, promoter_range = train_promoter_name.split(":")[0], train_promoter_name.split(":")[1]
-		train_promoter_start, train_promoter_end = int(promoter_range.split("-")[0]) - args.P_extended_left_length, int(promoter_range.split("-")[1]) + args.P_extended_right_length
-		train_promoter_name = chr + ":" + str(train_promoter_start) + "-" + str(train_promoter_end)
+		# chr, promoter_range = train_promoter_name.split(":")[0], train_promoter_name.split(":")[1]
+		# train_promoter_start, train_promoter_end = int(promoter_range.split("-")[0]) - args.P_extended_left_length, int(promoter_range.split("-")[1]) + args.P_extended_right_length
+		# train_promoter_name = chr + ":" + str(train_promoter_start) + "-" + str(train_promoter_end)
 
 		enhancer_tag = "nan" # 初期化
 		promoter_tag = "nan" # 初期化
 		if train_enhancer_name in enhancer_names:
 			index = enhancer_names.index(train_enhancer_name) # トレーニングデータのenhancer名から何番目のenhancerであるかを調べる
-			if enhancer_n_cnts[index] > 0: # nを含むものを学習データからはずす
-				continue
-			enhancer_tag = enhancer_tags[index]
+			if enhancer_n_cnts[index] == 0: # nを含むものはdoc2vecの学習に使ってないのでnを含んでないもののみを使う
+				enhancer_tag = enhancer_tags[index]
 
 		if train_promoter_name in promoter_names:
 			index = promoter_names.index(train_promoter_name)  # トレーニングデータのpromoter名から何番目のpromoterであるかを調べる
-			if promoter_n_cnts[index] > 0: # nを含むものを学習データからはずす
-				continue
-			promoter_tag = promoter_tags[index]
+			if promoter_n_cnts[index] == 0: # nを含むものはdoc2vecの学習に使ってないのでnを含んでないもののみを使う
+				promoter_tag = promoter_tags[index]
 
-		if enhancer_tag == "nan" or promoter_tag == "nan": 
+		if enhancer_tag == "nan" or promoter_tag == "nan":
 			continue
 
-		label = str(data["label"])
-
+		label = data["label"]
 		# enhancer の ~ 番目と promoter の ~ 番目 は pair/non-pair であるというメモを書き込む
-		fout.write(str(enhancer_tag)+'\t'+str(promoter_tag)+'\t'+label+'\n')
+		fout.write(str(enhancer_tag)+'\t'+str(promoter_tag)+'\t'+str(label)+'\n')
 
 		if label == '1': # 正例
-			positive_num = positive_num + 1
+			positive_num += 1
 		else: # 負例
-			negative_num = negative_num + 1
+			negative_num += 1
 
 	print(f"正例数: {positive_num}")
 	print(f"負例数: {negative_num}")
@@ -101,8 +98,8 @@ def train(args, cell_line):
 
 	print("分類器を学習します.")
 
-	arrays = np.zeros((positive_num+negative_num, args.embedding_vector_dimention*2)) # X (従属変数 後に EnhとPrmの embedding vector が入る)
-	labels = np.zeros(positive_num+negative_num) # Y (目的変数 後に ペア情報{0 or 1}が入る)
+	X = np.zeros((positive_num + negative_num, args.embedding_vector_dimention*2)) # X (従属変数 後に EnhとPrmの embedding vector が入る)
+	Y = np.zeros(positive_num+negative_num) # Y (目的変数 後に ペア情報{0 or 1}が入る)
 
 	if args.share_doc2vec:
 		# paragraph vector モデルのロード
@@ -114,13 +111,13 @@ def train(args, cell_line):
 			data = line.strip().split()
 			enhancer_tag = data[0] # "ENHANCER_0" などのembedding vector タグ
 			promoter_tag = data[1] # "PROMOTER_0" などのembedding vector タグ
+			label = int(data[2])
 			enhancer_vec = model.dv[enhancer_tag] # エンハンサーのembedding vector
 			promoter_vec = model.dv[promoter_tag] # プロモーターのembedding vector
 			enhancer_vec = enhancer_vec.reshape((1,args.embedding_vector_dimention))
 			promoter_vec = promoter_vec.reshape((1,args.embedding_vector_dimention))
-			arrays[i] = np.column_stack((enhancer_vec,promoter_vec)) # concat
-			labels[i] = int(data[2]) # 正例か負例か
-			i = i + 1
+			X[i] = np.column_stack((enhancer_vec,promoter_vec)) # concat
+			Y[i] = label # 正例か負例か
 	else:
 		# paragraph vector モデルのロード
 		enhancer_model = Doc2Vec.load(f'MyProject/data/model/{cell_line}_enhancer_{args.E_extended_left_length}_{args.E_extended_right_length}.model')
@@ -132,13 +129,13 @@ def train(args, cell_line):
 			data = line.strip().split()
 			enhancer_tag = data[0] # "ENHANCER_0" などのembedding vector タグ
 			promoter_tag = data[1] # "PROMOTER_0" などのembedding vector タグ
+			label = int(data[2])
 			enhancer_vec = enhancer_model.dv[enhancer_tag] # エンハンサーのembedding vector
 			promoter_vec = promoter_model.dv[promoter_tag] # プロモーターのembedding vector
 			enhancer_vec = enhancer_vec.reshape((1,args.embedding_vector_dimention))
 			promoter_vec = promoter_vec.reshape((1,args.embedding_vector_dimention))
-			arrays[i] = np.column_stack((enhancer_vec,promoter_vec)) # concat
-			labels[i] = int(data[2]) # 正例か負例か
-			i = i + 1
+			X[i] = np.column_stack((enhancer_vec,promoter_vec)) # concat
+			Y[i] = label # 正例か負例か
 
 	
 
@@ -148,9 +145,10 @@ def train(args, cell_line):
 
 	# 評価する指標
 	score_funcs = ['f1', 'roc_auc', 'average_precision']
-	cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=0)
+	cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=0) # ここで学習開始
 	print("分類器学習中...")
-	scores = cross_validate(estimator, arrays, labels, scoring = score_funcs, cv = cv, n_jobs = -1)
+
+	scores = cross_validate(estimator, X, Y, scoring = score_funcs, cv = cv, n_jobs = -1)
 
 	# 得られた指標を出力する & 結果の記録
 	print('F1:', scores['test_f1'].mean())
@@ -170,7 +168,7 @@ def train(args, cell_line):
 		},
 		index = ["1-fold", "2-fold", "3-fold", "4-fold", "5-fold", "6-fold", "7-fold", "8-fold", "9-fold", "10-fold", "mean"]	
 	)
-	result.to_csv(f"{args.my_data_folder_path}/result/{args.output}.csv")
+	result.to_csv(f"{args.my_data_folder_path}/result/{args.output}.csv") # 結果をcsvで保存
 
-	# t_sne
-	t_SNE(args, cell_line, arrays, labels)
+	# t_sneにて図示
+	t_SNE(args, cell_line, X, Y)

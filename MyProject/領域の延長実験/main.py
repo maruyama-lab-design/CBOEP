@@ -41,7 +41,7 @@ def my_project(args):
 
 	promoter_left_length_list = [0] # 意味が分かる変数名にしてほしい．
 	promoter_right_length_list = [0]
-	enhancer_left_length_list = [0]
+	enhancer_left_length_list = [0, 100, 200, 300, 400, 500]
 	enhancer_right_length_list = [0]
 
 	for cell_line in args.cell_line_list: # 細胞株毎のループ
@@ -58,7 +58,7 @@ def my_project(args):
 			args.P_extended_left_length = promoter_left_length
 			args.P_extended_right_length = promoter_right_length
 
-			args.output = f"{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)},kmer={args.way_of_kmer}"
+			args.output = f"{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)},kmer={args.way_of_kmer},N={args.sentence_cnt}"
 			if os.path.exists(args.output): # 存在してたらスキップ
 				print(args.output + " スキップ")
 				continue
@@ -112,6 +112,8 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	args.way_of_kmer = "normal"
+	if args.way_of_kmer == "normal":
+		args.sentence_cnt = 1
 
 	### Make the remaining part as a function like def func(args), and put it above. 
 	my_project(args)

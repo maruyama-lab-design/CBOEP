@@ -5,7 +5,7 @@ import argparse
 
 
 def t_SNE(args, cell_line, X, Y):
-	tsne = TSNE(n_components=2, random_state = 0)
+	tsne = TSNE(n_components=2, random_state = 0, perplexity = 30, n_iter = 1000)
 	X_reduced = tsne.fit_transform(X)
 
 	figure = plt.figure()

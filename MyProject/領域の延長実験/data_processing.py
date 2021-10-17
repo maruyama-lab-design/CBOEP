@@ -40,28 +40,29 @@ def create_region_sequence(args, cell_line):
 		text = ""
 		with open(f"{args.my_data_folder_path}/bed/enhancer/{cell_line}_enhancers.bed", "r") as origin_bed:
 			lines = origin_bed.readlines()
-			for line in lines:
+			for line in lines: # 一行ずつbedfileを読み込む
 				line = line.split("\t")
-				chr, start_pos, end_pos = line[0], int(line[1]), int(line[2])
-				start_pos -= args.E_extended_left_length
-				end_pos += args.E_extended_right_length
-				name = cell_line + "|" + chr + ":" + str(start_pos) + "-" + str(end_pos)
-				text += chr + "\t" + str(start_pos) + "\t" + str(end_pos) + "\t" + name + "\n"
+				chr, start_pos, end_pos, name = line[0], int(line[1]), int(line[2]), line[3]
+				start_pos -= args.E_extended_left_length # 上流を伸ばす
+				end_pos += args.E_extended_right_length # 下流を伸ばす
+				# name = cell_line + "|" + chr + ":" + str(start_pos) + "-" + str(end_pos) # {cell_line}|{chr}:{start_pos}-{end_pos}
+				text += chr + "\t" + str(start_pos) + "\t" + str(end_pos) + "\t" + name + "\n" # bedfile形式に書き込む
 		with open(extended_enhancer_bed_path, "w") as extended_bed:
 			extended_bed.write(text)
+
 	if not os.path.exists(extended_promoter_bed_path):
 		print("与えられたプロモーターのbedfileがありません")
 		print("オリジナルのプロモーターのbedfileから作成します...")
 		text = ""
 		with open(f"{args.my_data_folder_path}/bed/promoter/{cell_line}_promoters.bed", "r") as origin_bed:
 			lines = origin_bed.readlines()
-			for line in lines:
+			for line in lines: # 一行ずつ読み込み
 				line = line.split("\t")
-				chr, start_pos, end_pos = line[0], int(line[1]), int(line[2])
-				start_pos -= args.P_extended_left_length
-				end_pos += args.P_extended_right_length
-				name = cell_line + "|" + chr + ":" + str(start_pos) + "-" + str(end_pos)
-				text += chr + "\t" + str(start_pos) + "\t" + str(end_pos) + "\t" + name + "\n"
+				chr, start_pos, end_pos, name = line[0], int(line[1]), int(line[2]), line[3]
+				start_pos -= args.P_extended_left_length # 上流を伸ばす
+				end_pos += args.P_extended_right_length # 下流を伸ばす
+				# name = cell_line + "|" + chr + ":" + str(start_pos) + "-" + str(end_pos)
+				text += chr + "\t" + str(start_pos) + "\t" + str(end_pos) + "\t" + name + "\n" # bedfile形式に書き込む
 		with open(extended_promoter_bed_path, "w") as extended_bed:
 			extended_bed.write(text)
 
@@ -123,7 +124,7 @@ def make_region_table(args, cell_line):
 		if fasta_line[0] == ">": # ">chr1:17000-18000" のような行
 			region_tag = "ENHANCER_" + str(enhancer_id)
 			region_tags.append(region_tag)
-			name = fasta_line[1:].replace("\n", "")
+			name = fasta_line[1:].replace("\n", "") # "chr1:17000-18000"
 			chr, range_txt = name.split(":")[0], name.split(":")[1]
 			start_pos, end_pos = range_txt.split("-")[0], range_txt.split("-")[1]
 			names.append(name)
@@ -135,7 +136,7 @@ def make_region_table(args, cell_line):
 			n_cnts.append(n_cnt)
 			enhancer_id += 1
 
-
+	# pandas を使って csv に保存
 	df = pd.DataFrame({
 		"name":names,
 		"tag":region_tags,
@@ -145,7 +146,6 @@ def make_region_table(args, cell_line):
 		"n_cnt":n_cnts,
 	})
 	df.to_csv(f"{args.my_data_folder_path}/table/region/enhancer/{cell_line}_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.csv")
-
 	enhancer_fasta_file.close()
 	print(f"エンハンサーの領域情報をcsvファイルにて保存完了")
 
@@ -177,12 +177,12 @@ def make_region_table(args, cell_line):
 			starts.append(start_pos)
 			ends.append(end_pos)
 		else:
-			n_cnt = fasta_line.count("n")
+			n_cnt = fasta_line.count("n") # 配列内の"n"の個数を数える
 			n_cnts.append(n_cnt)
 			promoter_id += 1
 
 
-
+	# pandas
 	df = pd.DataFrame({
 		"name":names,
 		"tag":region_tags,
