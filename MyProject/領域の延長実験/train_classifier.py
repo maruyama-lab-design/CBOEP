@@ -53,16 +53,9 @@ def make_training_txt(args, cell_line):
 	fout = open('training.txt','w')
 	for _, data in train_csv.iterrows(): # train.csv を1行ずつ読み込み
 
-		# 自分で作ったcsvの領域情報には領域を伸ばした後locationが書かれているので戻す
-		train_enhancer_name = data["enhancer_name"].split("|")[1]
-		# chr, enhancer_range = train_enhancer_name.split(":")[0], train_enhancer_name.split(":")[1]
-		# train_enhancer_start, train_enhancer_end = int(enhancer_range.split("-")[0]) - args.E_extended_left_length, int(enhancer_range.split("-")[1]) + args.E_extended_right_length
-		# train_enhancer_name = chr + ":" + str(train_enhancer_start) + "-" + str(train_enhancer_end)
-
-		train_promoter_name = data["promoter_name"].split("|")[1]
-		# chr, promoter_range = train_promoter_name.split(":")[0], train_promoter_name.split(":")[1]
-		# train_promoter_start, train_promoter_end = int(promoter_range.split("-")[0]) - args.P_extended_left_length, int(promoter_range.split("-")[1]) + args.P_extended_right_length
-		# train_promoter_name = chr + ":" + str(train_promoter_start) + "-" + str(train_promoter_end)
+		#学習に使うペアの領域情報
+		train_enhancer_name = data["enhancer_name"]
+		train_promoter_name = data["promoter_name"]
 
 		enhancer_tag = "nan" # 初期化
 		promoter_tag = "nan" # 初期化

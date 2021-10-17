@@ -67,8 +67,8 @@ def create_region_sequence(args, cell_line):
 
 	# bedtools で hg19 を bed 切り出し → fasta に保存
 	print("bedfileからfastafileを作ります")
-	os.system(f"bedtools getfasta -fi {reference_genome_path} -bed "+ extended_enhancer_bed_path +" -fo "+ extended_enhancer_fasta_path)
-	os.system(f"bedtools getfasta -fi {reference_genome_path} -bed "+ extended_promoter_bed_path +" -fo "+ extended_promoter_fasta_path)
+	os.system(f"bedtools getfasta -fi {reference_genome_path} -bed "+ extended_enhancer_bed_path +" -fo "+ extended_enhancer_fasta_path -name)
+	os.system(f"bedtools getfasta -fi {reference_genome_path} -bed "+ extended_promoter_bed_path +" -fo "+ extended_promoter_fasta_path -name)
 
 	# 塩基配列を全て小文字へ
 	# reverse complement 作成
@@ -111,9 +111,6 @@ def make_region_table(args, cell_line):
 	enhancer_id = 0
 	names = [] # chr1:900000-9100000 など
 	region_tags = [] # ENHANCER_0 などの tag を入れていく
-	chrs = [] # chr1 などを入れていく
-	starts = []	# start pos を入れていく
-	ends = [] # end pos を入れていく
 	n_cnts = [] # sequence 内の "n" の個数を入れていく
 
 	fasta_lines = enhancer_fasta_file.readlines()
@@ -123,12 +120,7 @@ def make_region_table(args, cell_line):
 			region_tag = "ENHANCER_" + str(enhancer_id)
 			region_tags.append(region_tag)
 			name = fasta_line[1:].replace("\n", "") # "chr1:17000-18000"
-			chr, range_txt = name.split(":")[0], name.split(":")[1]
-			start_pos, end_pos = range_txt.split("-")[0], range_txt.split("-")[1]
 			names.append(name)
-			chrs.append(chr)
-			starts.append(start_pos)
-			ends.append(end_pos)
 		else: # 実際の塩基配列 nの個数を調べる
 			n_cnt = fasta_line.count("n")
 			n_cnts.append(n_cnt)
@@ -138,9 +130,6 @@ def make_region_table(args, cell_line):
 	df = pd.DataFrame({
 		"name":names,
 		"tag":region_tags,
-		"chr":chrs,
-		"start":starts,
-		"end":ends,
 		"n_cnt":n_cnts,
 	})
 	df.to_csv(f"{args.my_data_folder_path}/table/region/enhancer/{cell_line}_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.csv")
@@ -154,9 +143,6 @@ def make_region_table(args, cell_line):
 	promoter_id = 0
 	names = [] # chr1:900000-9100000 など
 	region_tags = [] # PROMOTER_0 などの id を入れていく
-	chrs = [] # chr1 などを入れていく
-	starts = []	# start pos を入れていく
-	ends = [] # end pos を入れていく
 	n_cnts = [] # sequence 内の "n" の個数を入れていく
 
 	fasta_lines = promoter_fasta_file.readlines()
@@ -166,14 +152,8 @@ def make_region_table(args, cell_line):
 		if fasta_line[0] == ">": # ">chr1:17000-18000" のような行
 			region_tag = "PROMOTER_" + str(promoter_id)
 			region_tags.append(region_tag)
-
 			name = fasta_line[1:].replace("\n", "")
-			chr, range_txt = name.split(":")[0], name.split(":")[1]
-			start_pos, end_pos = range_txt.split("-")[0], range_txt.split("-")[1]
 			names.append(name)
-			chrs.append(chr)
-			starts.append(start_pos)
-			ends.append(end_pos)
 		else:
 			n_cnt = fasta_line.count("n") # 配列内の"n"の個数を数える
 			n_cnts.append(n_cnt)
@@ -184,9 +164,6 @@ def make_region_table(args, cell_line):
 	df = pd.DataFrame({
 		"name":names,
 		"tag":region_tags,
-		"chr":chrs,
-		"start":starts,
-		"end":ends,
 		"n_cnt":n_cnts,
 	})
 	df.to_csv(f"{args.my_data_folder_path}/table/region/promoter/{cell_line}_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.csv")
