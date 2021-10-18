@@ -94,9 +94,9 @@ def train(args, cell_line):
 	X = np.zeros((positive_num + negative_num, args.embedding_vector_dimention*2)) # X (従属変数 後に EnhとPrmの embedding vector が入る)
 	Y = np.zeros(positive_num+negative_num) # Y (目的変数 後に ペア情報{0 or 1}が入る)
 
-	if args.share_doc2vec:
+	if args.share_doc2vec: #エンハンサーとプロモーター共存
 		# paragraph vector モデルのロード
-		model = Doc2Vec.load(f'MyProject/data/model/{cell_line}_enhancer_{args.E_extended_left_length}_{args.E_extended_right_length}_promoter_{args.P_extended_left_length}_{args.P_extended_right_length}.model')
+		model = Doc2Vec.load(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
 
 		# メモしておいたペア情報を使う
 		fin = open('training.txt','r')
@@ -111,10 +111,10 @@ def train(args, cell_line):
 			promoter_vec = promoter_vec.reshape((1,args.embedding_vector_dimention))
 			X[i] = np.column_stack((enhancer_vec,promoter_vec)) # concat
 			Y[i] = label # 正例か負例か
-	else:
+	else: # エンハンサーとプロモーター別々
 		# paragraph vector モデルのロード
-		enhancer_model = Doc2Vec.load(f'MyProject/data/model/{cell_line}_enhancer_{args.E_extended_left_length}_{args.E_extended_right_length}.model')
-		promoter_model = Doc2Vec.load(f'MyProject/data/model/{cell_line}_promoter_{args.P_extended_left_length}_{args.P_extended_right_length}.model')
+		enhancer_model = Doc2Vec.load(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
+		promoter_model = Doc2Vec.load(f"{args.my_data_folder_path}/d2v/{cell_line},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
 
 		# メモしておいたペア情報を使う
 		fin = open('training.txt','r')

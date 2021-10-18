@@ -15,7 +15,7 @@ def make_directory(args):
 
     os.system(f"mkdir -p {args.my_data_folder_path}/figure")
 
-    os.system(f"mkdir -p {args.my_data_folder_path}/model")
+    os.system(f"mkdir -p {args.my_data_folder_path}/d2v")
 
     os.system(f"mkdir -p {args.my_data_folder_path}/result")
 

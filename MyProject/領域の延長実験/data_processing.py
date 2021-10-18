@@ -26,14 +26,6 @@ def create_region_sequence(args, cell_line):
 	extended_enhancer_bed_path = f"{args.my_data_folder_path}/bed/enhancer/{cell_line}_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.bed"
 	extended_promoter_bed_path = f"{args.my_data_folder_path}/bed/promoter/{cell_line}_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.bed"
 
-	# output fasta (forward)
-	extended_enhancer_fasta_path = f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.fa"
-	extended_promoter_fasta_path = f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.fa"
-
-	# output fasta (reverse)
-	extended_enhancer_r_fasta_path = f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_r_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.fa"
-	extended_promoter_r_fasta_path = f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_r_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.fa"
-
 	if not os.path.exists(extended_enhancer_bed_path):
 		print("与えられたエンハンサーのbedfileがありません")
 		print("オリジナルのエンハンサーのbedfileから作成します...")
@@ -65,6 +57,14 @@ def create_region_sequence(args, cell_line):
 			extended_bed.write(text)
 
 
+	# fasta (forward)
+	extended_enhancer_fasta_path = f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.fa"
+	extended_promoter_fasta_path = f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.fa"
+
+	# fasta (reverse)
+	extended_enhancer_r_fasta_path = f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}_r.fa"
+	extended_promoter_r_fasta_path = f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}_r.fa"
+
 	# bedtools で hg19 を bed 切り出し → fasta に保存
 	print("bedfileからfastafileを作ります")
 	os.system(f"bedtools getfasta -fi {reference_genome_path} -bed {extended_enhancer_bed_path} -fo {extended_enhancer_fasta_path} -name")
@@ -76,7 +76,7 @@ def create_region_sequence(args, cell_line):
 	reverse_seqs = "" # reverse complement
 	with open(extended_enhancer_fasta_path, "r") as fout:
 		seqs = fout.read()
-	seqs = seqs.replace("A", "a").replace("G", "g").replace("C", "c").replace("T", "t").replace("N", "n")
+	seqs = seqs.replace("A", "a").replace("G", "g").replace("C", "c").replace("T", "t").replace("N", "n").replace("gM12878","GM12878").replace("HUVEc","HUVEC")
 	reverse_seqs = seqs.replace("a", "¥").replace("t", "a").replace("¥", "t").replace("c", "¥").replace("g", "c").replace("¥", "g").replace("ghr", "chr")
 	with open(extended_enhancer_fasta_path, "w") as fout:
 		fout.write(seqs)
@@ -85,7 +85,7 @@ def create_region_sequence(args, cell_line):
 	
 	with open(extended_promoter_fasta_path, "r") as fout:
 		seqs = fout.read()
-	seqs = seqs.replace("A", "a").replace("G", "g").replace("C", "c").replace("T", "t").replace("N", "n")
+	seqs = seqs.replace("A", "a").replace("G", "g").replace("C", "c").replace("T", "t").replace("N", "n").replace("gM12878","GM12878").replace("HUVEc","HUVEC")
 	reverse_seqs = seqs.replace("a", "¥").replace("t", "a").replace("¥", "t").replace("c", "¥").replace("g", "c").replace("¥", "g").replace("ghr", "chr")
 	with open(extended_promoter_fasta_path, "w") as fout:
 		fout.write(seqs)
@@ -98,13 +98,12 @@ def make_region_table(args, cell_line):
 	# 前提として、全領域の bedfile, fastafile が存在する必要があります.
 
 		# enhancer のテーブルデータの例
-			#	id				chr   	start	end		n_cnt
-			#	ENHANCER_34		chr1	235686	235784	0
-
+			#	name			tag			n_cnt
+			#	K562|1000-2000	ENHANCER_0	0
+			#	K562|3000-3500	ENHANCER_1	2
 	# -------------
 
 	print(f"全ての エンハンサー, プロモーター 領域について csvファイルを作成します.")
-	print(f"{cell_line} 開始")
 	print(f"エンハンサー...")
 	enhancer_fasta_file = open(f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.fa", "r")
 
@@ -119,11 +118,11 @@ def make_region_table(args, cell_line):
 		if fasta_line[0] == ">": # ">chr1:17000-18000" のような行
 			region_tag = "ENHANCER_" + str(enhancer_id)
 			region_tags.append(region_tag)
-			name = fasta_line[1:]
+			name = fasta_line[1:] # ">"を除外
 			name = name.split("::")[0]
 			names.append(name)
-		else: # 実際の塩基配列 nの個数を調べる
-			n_cnt = fasta_line.count("n")
+		else:
+			n_cnt = fasta_line.count("n") # 実際の塩基配列 nの個数を調べる
 			n_cnts.append(n_cnt)
 			enhancer_id += 1
 
@@ -153,7 +152,7 @@ def make_region_table(args, cell_line):
 		if fasta_line[0] == ">": # ">chr1:17000-18000" のような行
 			region_tag = "PROMOTER_" + str(promoter_id)
 			region_tags.append(region_tag)
-			name = fasta_line[1:]
+			name = fasta_line[1:] # ">"を除外
 			name = name.split("::")[0]
 			names.append(name)
 		else:
@@ -218,8 +217,6 @@ def create_promoter_bedfile_divided_from_tss(args, cell_line):
 	print(len(tss_bed_table))
 	print(len(promoter_bed_table))
 
-
-	# promoter_divided_from_tss_bedfile = open("")
 
 
 def create_region_sequence_and_table(args, cell_line):

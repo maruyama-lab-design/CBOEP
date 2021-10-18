@@ -21,9 +21,9 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 	print(f"{cell_line} のエンハンサーとプロモーターの両方を1つのdoc2vecで学習します")
 	print("doc2vec のための前処理 開始")
 
-	print(f"{cell_line} の エンハンサー...")
+	print(f"エンハンサー...")
 	enhancer_fasta_file = open(f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.fa", "r")
-	enhancer_reverse_fasta_file = open(f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_r_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}.fa", "r")
+	enhancer_reverse_fasta_file = open(f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_enhancers_{args.E_extended_left_length}_{args.E_extended_right_length}_r.fa", "r")
 	fasta_lines = enhancer_fasta_file.readlines()
 	reverse_fasta_lines = enhancer_reverse_fasta_file.readlines()
 
@@ -54,13 +54,14 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 
 	enhancer_fasta_file.close()
 	enhancer_reverse_fasta_file.close()
-	print(f"{cell_line} の エンハンサー 終了")
+	print(f"エンハンサー 終了")
 	enhancer_cnt = len(sentences) // (2 * args.sentence_cnt)
 	print(f"エンハンサーの個数 {enhancer_cnt}")
 
-	print(f"{cell_line} の プロモーター...")
+
+	print(f"プロモーター...")
 	promoter_fasta_file = open(f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.fa", "r")
-	promoter_reverse_fasta_file = open(f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_r_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}.fa", "r")
+	promoter_reverse_fasta_file = open(f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_promoters_{args.P_extended_left_length}_{args.P_extended_right_length}_r.fa", "r")
 	fasta_lines = promoter_fasta_file.readlines()
 	reverse_fasta_lines = promoter_reverse_fasta_file.readlines()
 
@@ -104,7 +105,7 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 		epochs=model.epochs
 	)
 	print("終了")
-	model.save(f"{args.my_data_folder_path}/model/{cell_line}_enhancer_{args.E_extended_left_length}_{args.E_extended_right_length}_promoter_{args.P_extended_left_length}_{args.P_extended_right_length}.model")
+	model.save(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
 
 
 def make_paragraph_vector_from_enhancer_only(args, cell_line):
@@ -158,7 +159,7 @@ def make_paragraph_vector_from_enhancer_only(args, cell_line):
 		epochs=model.epochs
 	)
 	print("終了")
-	model.save(f"{args.my_data_folder_path}/model/{cell_line}_enhancer_{args.E_extended_left_length}_{args.E_extended_right_length}.model")
+	model.save(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
 
 
 def make_paragraph_vector_from_promoter_only(args, cell_line):
@@ -213,4 +214,4 @@ def make_paragraph_vector_from_promoter_only(args, cell_line):
 		epochs=model.epochs
 	)
 	print("終了")
-	model.save(f"{args.my_data_folder_path}/model/{cell_line}_promoter_{args.P_extended_left_length}_{args.P_extended_right_length}.model")
+	model.save(f"{args.my_data_folder_path}/d2v/{cell_line},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
