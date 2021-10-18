@@ -42,10 +42,9 @@ def create_region_sequence(args, cell_line):
 			lines = origin_bed.readlines()
 			for line in lines: # 一行ずつbedfileを読み込む
 				line = line.split("\t")
-				chr, start_pos, end_pos, name = line[0], int(line[1]), int(line[2]), line[3]
+				chr, start_pos, end_pos, name = line[0], int(line[1]), int(line[2]), line[3].replace("\n", "")
 				start_pos -= args.E_extended_left_length # 上流を伸ばす
 				end_pos += args.E_extended_right_length # 下流を伸ばす
-				# name = cell_line + "|" + chr + ":" + str(start_pos) + "-" + str(end_pos) # {cell_line}|{chr}:{start_pos}-{end_pos}
 				text += chr + "\t" + str(start_pos) + "\t" + str(end_pos) + "\t" + name + "\n" # bedfile形式に書き込む
 		with open(extended_enhancer_bed_path, "w") as extended_bed:
 			extended_bed.write(text)
@@ -58,10 +57,9 @@ def create_region_sequence(args, cell_line):
 			lines = origin_bed.readlines()
 			for line in lines: # 一行ずつ読み込み
 				line = line.split("\t")
-				chr, start_pos, end_pos, name = line[0], int(line[1]), int(line[2]), line[3]
+				chr, start_pos, end_pos, name = line[0], int(line[1]), int(line[2]), line[3].replace("\n", "")
 				start_pos -= args.P_extended_left_length # 上流を伸ばす
 				end_pos += args.P_extended_right_length # 下流を伸ばす
-				# name = cell_line + "|" + chr + ":" + str(start_pos) + "-" + str(end_pos)
 				text += chr + "\t" + str(start_pos) + "\t" + str(end_pos) + "\t" + name + "\n" # bedfile形式に書き込む
 		with open(extended_promoter_bed_path, "w") as extended_bed:
 			extended_bed.write(text)

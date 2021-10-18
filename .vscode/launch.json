@@ -12,8 +12,8 @@
             "console": "integratedTerminal",
             "args":
             [
-                "-my_data_folder_path", "/Users/ylwrvr/卒論/Koga_code/MyProject/data",
-                "--cell_line_list", "K562",
+                "-my_data_folder_path", "/home/koga/Koga_code-1/MyProject/data",
+                "--cell_line_list", "K562", "GM12878", "HUVEC", "HeLa-S3", "IMR90", "NKEK",
                 "--make_directory",
                 // "--download_reference_genome",
                 "--share_doc2vec"

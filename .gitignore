@@ -1,4 +1,5 @@
 MyProject/data
 MyProject/test
+*.json
 *.pyc
 *.txt

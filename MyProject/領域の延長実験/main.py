@@ -41,8 +41,8 @@ def my_project(args):
 
 	promoter_left_length_list = [0] # 意味が分かる変数名にしてほしい．
 	promoter_right_length_list = [0]
-	enhancer_left_length_list = [0, 100, 200, 300, 400, 500]
-	enhancer_right_length_list = [0]
+	enhancer_left_length_list = [1000]
+	enhancer_right_length_list = [1000]
 
 	for cell_line in args.cell_line_list: # 細胞株毎のループ
 
@@ -59,9 +59,9 @@ def my_project(args):
 			args.P_extended_right_length = promoter_right_length
 
 			args.output = f"{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)},kmer={args.way_of_kmer},N={args.sentence_cnt}"
-			if os.path.exists(args.output): # 存在してたらスキップ
-				print(args.output + " スキップ")
-				continue
+			# if os.path.exists(args.output): # 存在してたらスキップ
+			# 	print(args.output + " スキップ")
+			# 	continue
 			
 			create_region_sequence_and_table(args, cell_line) ### どのようなプロセスかが分かる関数名がいいです．
 

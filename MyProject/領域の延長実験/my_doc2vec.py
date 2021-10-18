@@ -150,7 +150,7 @@ def make_paragraph_vector_from_enhancer_only(args, cell_line):
 		corpus.append(TaggedDocument(sentence, [tag]))
 
 	print(f"doc2vec 学習...")
-	model = Doc2Vec(min_count=1, window=10, vector_size=args.embedding_vector_dimention, sample=1e-4, negative=5, workers=8, epochs=10)
+	model = Doc2Vec(min_count=1, window=10, vector_size=args.embedding_vector_dimention, sample=1e-4, negative=5, workers=30, epochs=10)
 	model.build_vocab(corpus)
 	model.train(
 		corpus,
