@@ -40,7 +40,7 @@ def my_project(args, cell_line):
 	data_download.download_enhancer_and_promoter(args, cell_line)
 
 	args.output = f"{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)},kmer={args.way_of_kmer},N={args.sentence_cnt}"
-	
+
 	# if os.path.exists(args.output): # 存在してたらスキップ
 	# 	print(args.output + " スキップ")
 	# 	continue
@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
 
 	### Make the remaining part as a function like def func(args), and put it above. 
-	for cell_line in args.cell_line_list:
+	for cell_line in args.cell_line_list: # 細胞株ごとにループss
 		my_project(args, cell_line)
 
 	### save the contents of args to a log file.
