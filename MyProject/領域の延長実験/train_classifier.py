@@ -76,7 +76,7 @@ def make_training_txt(args, cell_line):
 		# enhancer の ~ 番目と promoter の ~ 番目 は pair/non-pair であるというメモを書き込む
 		fout.write(str(enhancer_tag)+'\t'+str(promoter_tag)+'\t'+str(label)+'\n')
 
-		if label == '1': # 正例
+		if label == 1: # 正例
 			positive_num += 1
 		else: # 負例
 			negative_num += 1
@@ -138,10 +138,9 @@ def train(args, cell_line):
 
 	# 評価する指標
 	score_funcs = ['f1', 'roc_auc', 'average_precision']
-	cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=0) # ここで学習開始
+	cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=0)
 	print("分類器学習中...")
-
-	scores = cross_validate(estimator, X, Y, scoring = score_funcs, cv = cv, n_jobs = -1)
+	scores = cross_validate(estimator, X, Y, scoring = score_funcs, cv = cv, n_jobs = -1) # ここで学習開始
 
 	# 得られた指標を出力する & 結果の記録
 	print('F1:', scores['test_f1'].mean())

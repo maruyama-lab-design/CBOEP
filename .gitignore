@@ -1,3 +1,4 @@
+.vscode/*
 MyProject/data
 MyProject/test
 *.json

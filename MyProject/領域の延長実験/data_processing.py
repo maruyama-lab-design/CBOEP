@@ -67,8 +67,8 @@ def create_region_sequence(args, cell_line):
 
 	# bedtools で hg19 を bed 切り出し → fasta に保存
 	print("bedfileからfastafileを作ります")
-	os.system(f"bedtools getfasta -fi {reference_genome_path} -bed "+ extended_enhancer_bed_path +" -fo "+ extended_enhancer_fasta_path -name)
-	os.system(f"bedtools getfasta -fi {reference_genome_path} -bed "+ extended_promoter_bed_path +" -fo "+ extended_promoter_fasta_path -name)
+	os.system(f"bedtools getfasta -fi {reference_genome_path} -bed {extended_enhancer_bed_path} -fo {extended_enhancer_fasta_path} -name")
+	os.system(f"bedtools getfasta -fi {reference_genome_path} -bed {extended_promoter_bed_path} -fo {extended_promoter_fasta_path} -name")
 
 	# 塩基配列を全て小文字へ
 	# reverse complement 作成
@@ -119,7 +119,8 @@ def make_region_table(args, cell_line):
 		if fasta_line[0] == ">": # ">chr1:17000-18000" のような行
 			region_tag = "ENHANCER_" + str(enhancer_id)
 			region_tags.append(region_tag)
-			name = fasta_line[1:].replace("\n", "") # "chr1:17000-18000"
+			name = fasta_line[1:]
+			name = name.split("::")[0]
 			names.append(name)
 		else: # 実際の塩基配列 nの個数を調べる
 			n_cnt = fasta_line.count("n")
@@ -152,7 +153,8 @@ def make_region_table(args, cell_line):
 		if fasta_line[0] == ">": # ">chr1:17000-18000" のような行
 			region_tag = "PROMOTER_" + str(promoter_id)
 			region_tags.append(region_tag)
-			name = fasta_line[1:].replace("\n", "")
+			name = fasta_line[1:]
+			name = name.split("::")[0]
 			names.append(name)
 		else:
 			n_cnt = fasta_line.count("n") # 配列内の"n"の個数を数える
