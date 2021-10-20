@@ -14,7 +14,23 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 
 
-def create_region_sequence(args, cell_line):
+def create_extended_region_table(args, cell_line):
+	# -----説明-----
+	# table data の確認，カラムの修正だけ
+	# -------------
+
+	for region_type in ["enhancer", "promoter"]:
+		origin_bed_df = pd.read_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv")
+		if region_type == "enhancer":
+			origin_bed_df["start_extended"] = origin_bed_df["start_origin"] - args.E_extended_left_length
+			origin_bed_df["end_extended"] = origin_bed_df["end_origin"] + args.E_extended_right_length
+		elif region_type == "promoter":
+			origin_bed_df["start_extended"] = origin_bed_df["start_origin"] - args.P_extended_left_length
+			origin_bed_df["end_extended"] = origin_bed_df["end_origin"] + args.P_extended_right_length
+		origin_bed_df.to_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv")
+
+
+def create_region_sequence_unused(args, cell_line):
 	# -----説明-----
 	# bedファイル を参照し、enhancer, promoter 塩基配列 の切り出し & fasta形式で保存
 	# -------------
@@ -74,10 +90,11 @@ def create_region_sequence(args, cell_line):
 	# reverse complement 作成
 	seqs = ""
 	reverse_seqs = "" # reverse complement
+	# biopythonを使う
 	with open(extended_enhancer_fasta_path, "r") as fout:
 		seqs = fout.read()
 	seqs = seqs.replace("A", "a").replace("G", "g").replace("C", "c").replace("T", "t").replace("N", "n").replace("gM12878","GM12878").replace("HUVEc","HUVEC")
-	reverse_seqs = seqs.replace("a", "¥").replace("t", "a").replace("¥", "t").replace("c", "¥").replace("g", "c").replace("¥", "g").replace("ghr", "chr")
+	reverse_seqs = seqs.replace("a", "¥").replace("t", "a").replace("¥", "t").replace("c", "¥").replace("g", "c").replace("¥", "g").replace("ghr", "chr").replace("HeLt", "HeLa")
 	with open(extended_enhancer_fasta_path, "w") as fout:
 		fout.write(seqs)
 	with open(extended_enhancer_r_fasta_path, "w") as fout:
@@ -86,14 +103,14 @@ def create_region_sequence(args, cell_line):
 	with open(extended_promoter_fasta_path, "r") as fout:
 		seqs = fout.read()
 	seqs = seqs.replace("A", "a").replace("G", "g").replace("C", "c").replace("T", "t").replace("N", "n").replace("gM12878","GM12878").replace("HUVEc","HUVEC")
-	reverse_seqs = seqs.replace("a", "¥").replace("t", "a").replace("¥", "t").replace("c", "¥").replace("g", "c").replace("¥", "g").replace("ghr", "chr")
+	reverse_seqs = seqs.replace("a", "¥").replace("t", "a").replace("¥", "t").replace("c", "¥").replace("g", "c").replace("¥", "g").replace("ghr", "chr").replace("HeLt", "HeLa")
 	with open(extended_promoter_fasta_path, "w") as fout:
 		fout.write(seqs)
 	with open(extended_promoter_r_fasta_path, "w") as fout:
 		fout.write(reverse_seqs)
 
 
-def make_region_table(args, cell_line):
+def create_region_table_unused(args, cell_line):
 	# -----説明-----
 	# 前提として、全領域の bedfile, fastafile が存在する必要があります.
 
@@ -173,7 +190,7 @@ def make_region_table(args, cell_line):
 	print(f"プロモーターの領域情報をcsvファイルにて保存完了")
 
 
-def create_promoter_bedfile_divided_from_tss(args, cell_line):
+def create_promoter_bedfile_divided_from_tss_unused(args, cell_line):
 	print("tssデータをダウンロード...")
 	os.system(f"wget {args.targetfinder_data_root_url}/{cell_line}/output-ep/tss.bed -O {args.my_data_folder_path}/bed/tss/{cell_line}_tss.bed")
 	print("ダウンロードしたtssのbedfileを編集")
@@ -220,5 +237,5 @@ def create_promoter_bedfile_divided_from_tss(args, cell_line):
 
 
 def create_region_sequence_and_table(args, cell_line):
-	create_region_sequence(args, cell_line)
-	make_region_table(args, cell_line)
+	create_extended_region_table(args, cell_line)
+	# create_region_table(args, cell_line)

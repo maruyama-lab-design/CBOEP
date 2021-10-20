@@ -52,9 +52,10 @@ def my_project(args, cell_line):
 	args.stage1_start_time = datetime.datetime.now()
 	if args.share_doc2vec:
 		my_doc2vec.make_paragraph_vector_from_enhancer_and_promoter(args, cell_line)
-	else:
-		my_doc2vec.make_paragraph_vector_from_enhancer_only(args, cell_line)
-		my_doc2vec.make_paragraph_vector_from_promoter_only(args, cell_line)
+	else: # 現在修正中のため使えない
+		# my_doc2vec.make_paragraph_vector_from_enhancer_only(args, cell_line)
+		# my_doc2vec.make_paragraph_vector_from_promoter_only(args, cell_line)
+		foo = ""
 	args.stage1_end_time = datetime.datetime.now()
 
 	# 分類期学習
@@ -72,10 +73,10 @@ if __name__ == '__main__':
 	parser.add_argument("--download_reference_genome", action="store_true", help="リファレンスゲノムを外部からダウンロードするか")
 	parser.add_argument("--share_doc2vec", action="store_true", help="エンハンサーとプロモーターを一つのdoc2vecに共存させるか")
 	parser.add_argument("--cell_line_list", nargs="+", help="細胞株の名前 (複数選択可能)", default=["K562"])
-	parser.add_argument("-el", "--E_extended_left_length", type=int, default=0, help="エンハンサーの上流をどれだけ伸ばすか")
-	parser.add_argument("-er", "--E_extended_right_length", type=int, default=0, help="エンハンサーの下流をどれだけ伸ばすか")
-	parser.add_argument("-pl", "--P_extended_left_length", type=int, default=0, help="プロモーターの上流をどれだけ伸ばすか")
-	parser.add_argument("-pr", "--P_extended_right_length", type=int, default=0, help="プロモーターの下流をどれだけ伸ばすか")
+	parser.add_argument("-el", "--E_extended_left_length", type=int, default=10, help="エンハンサーの上流をどれだけ伸ばすか")
+	parser.add_argument("-er", "--E_extended_right_length", type=int, default=20, help="エンハンサーの下流をどれだけ伸ばすか")
+	parser.add_argument("-pl", "--P_extended_left_length", type=int, default=30, help="プロモーターの上流をどれだけ伸ばすか")
+	parser.add_argument("-pr", "--P_extended_right_length", type=int, default=40, help="プロモーターの下流をどれだけ伸ばすか")
 	parser.add_argument("--embedding_vector_dimention", type=int, default=100, help="paragraph vector の次元")
 	parser.add_argument('--way_of_kmer', type=str, choices=['normal', 'random'], default="normal", help='k-merの切り方 固定長かランダム長か')
 	parser.add_argument("--k", type=int, default=6, help="固定長のk-merの場合のk")

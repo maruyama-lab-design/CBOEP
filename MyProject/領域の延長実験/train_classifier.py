@@ -28,6 +28,41 @@ def make_training_txt(args, cell_line):
 	#	:				:				:
 	# ________________________________
 
+	
+	# 前工程で作ったcsvを読み込む
+	enhancer_bed_table = pd.read_csv(f"{args.my_data_folder_path}/bed/enhancer/{cell_line}_enhancers.bed.csv", usecols=["name_origin"])
+	promoter_bed_table = pd.read_csv(f"{args.my_data_folder_path}/bed/promoter/{cell_line}_promoters.bed.csv", usecols=["name_origin"])
+
+	train_csv = ""
+	if not os.path.isfile(f"{args.my_data_folder_path}/train/{cell_line}_train.csv"):
+		print("トレーニングデータが見つかりません. ダウンロードします.") # ep2vecよりダウンロード
+		train_csv = pd.read_csv(f"https://raw.githubusercontent.com/wanwenzeng/ep2vec/master/{cell_line}train.csv", usecols=["bin", "enhancer_name", "promoter_name", "label"])
+	train_csv.to_csv(f"{args.my_data_folder_path}/train/{cell_line}_train.csv")
+
+	# ペア情報を training.txt にメモ
+	fout = open('training.txt','w')
+	for _, row_data in train_csv.iterrows():
+		enhancer_index = enhancer_bed_table["name_origin"].index(row_data["enhancer_name"])
+		enhancer_tag = "enhancer_" + str(enhancer_index)
+		promoter_index = promoter_bed_table["name_origin"].index(row_data["promoter_name"])
+		promoter_tag = "promoter_" + str(promoter_index)
+		label = row_data["label"]
+
+		# enhancer の ~ 番目と promoter の ~ 番目 は pair/non-pair であるというメモを書き込む
+		fout.write(enhancer_tag +'\t'+ promoter_tag + '\t' + str(label) + '\n')
+	fout.close()
+
+
+def make_training_txt_unused(args, cell_line):
+	# 分類器学習の際の前処理
+	# textfileにてペア情報を書き込む
+	# ___training.txt_________________
+	#	ENHANCER_521	PROMOTER_61		1
+	# 	ENHANCER_1334	PROMOTER_129	1
+	# 	ENHANCER_1335	PROMOTER_129	1
+	#	:				:				:
+	# ________________________________
+
 	global positive_num,negative_num
 	print("トレーニングデータを参照してtxtfileを作成します.")
 	positive_num = 0
@@ -91,13 +126,15 @@ def train(args, cell_line):
 
 	print("分類器を学習します.")
 
-	X = np.zeros((positive_num + negative_num, args.embedding_vector_dimention*2)) # X (従属変数 後に EnhとPrmの embedding vector が入る)
-	Y = np.zeros(positive_num+negative_num) # Y (目的変数 後に ペア情報{0 or 1}が入る)
+	# X = np.zeros((positive_num + negative_num, args.embedding_vector_dimention*2)) # X (従属変数 後に EnhとPrmの embedding vector が入る)
+	# Y = np.zeros(positive_num+negative_num) # Y (目的変数 後に ペア情報{0 or 1}が入る)
+	X = np.empty(0, args.embedding_vector_dimention * 2)
+	Y = np.empty(0)
 
 	if args.share_doc2vec: #エンハンサーとプロモーター共存
 		# paragraph vector モデルのロード
 		model = Doc2Vec.load(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
-
+		paragraph_tag_list = list(model.dv.doctags)
 		# メモしておいたペア情報を使う
 		fin = open('training.txt','r')
 		for i, line in enumerate(fin):
@@ -105,17 +142,25 @@ def train(args, cell_line):
 			enhancer_tag = data[0] # "ENHANCER_0" などのembedding vector タグ
 			promoter_tag = data[1] # "PROMOTER_0" などのembedding vector タグ
 			label = int(data[2])
+
+			if (enhancer_tag not in paragraph_tag_list) or (promoter_tag not in paragraph_tag_list):
+				continue
+
 			enhancer_vec = model.dv[enhancer_tag] # エンハンサーのembedding vector
 			promoter_vec = model.dv[promoter_tag] # プロモーターのembedding vector
 			enhancer_vec = enhancer_vec.reshape((1,args.embedding_vector_dimention))
 			promoter_vec = promoter_vec.reshape((1,args.embedding_vector_dimention))
-			X[i] = np.column_stack((enhancer_vec,promoter_vec)) # concat
-			Y[i] = label # 正例か負例か
+			concat_vec = np.column_stack((enhancer_vec,promoter_vec))
+			X = np.append(X, concat_vec)
+			Y = np.append(Y, label) # 正例か負例か
 	else: # エンハンサーとプロモーター別々
 		# paragraph vector モデルのロード
 		enhancer_model = Doc2Vec.load(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
 		promoter_model = Doc2Vec.load(f"{args.my_data_folder_path}/d2v/{cell_line},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
 
+		enhancer_paragraph_tag_list = list(enhancer_model.dv.doctags)
+		promoter_paragraph_tag_list = list(promoter_model.dv.doctags)
+
 		# メモしておいたペア情報を使う
 		fin = open('training.txt','r')
 		for i, line in enumerate(fin):
@@ -123,12 +168,17 @@ def train(args, cell_line):
 			enhancer_tag = data[0] # "ENHANCER_0" などのembedding vector タグ
 			promoter_tag = data[1] # "PROMOTER_0" などのembedding vector タグ
 			label = int(data[2])
+
+			if (enhancer_tag not in enhancer_paragraph_tag_list) or (promoter_tag not in promoter_paragraph_tag_list):
+				continue
+
 			enhancer_vec = enhancer_model.dv[enhancer_tag] # エンハンサーのembedding vector
 			promoter_vec = promoter_model.dv[promoter_tag] # プロモーターのembedding vector
 			enhancer_vec = enhancer_vec.reshape((1,args.embedding_vector_dimention))
 			promoter_vec = promoter_vec.reshape((1,args.embedding_vector_dimention))
-			X[i] = np.column_stack((enhancer_vec,promoter_vec)) # concat
-			Y[i] = label # 正例か負例か
+			concat_vec = np.column_stack((enhancer_vec,promoter_vec))
+			X = np.append(X, concat_vec)
+			Y = np.append(Y, label) # 正例か負例か
 
 	
 
@@ -163,4 +213,4 @@ def train(args, cell_line):
 	result.to_csv(f"{args.my_data_folder_path}/result/{args.output}.csv") # 結果をcsvで保存
 
 	# t_sneにて図示
-	t_SNE(args, cell_line, X, Y)
+	t_SNE(args, X, Y)
