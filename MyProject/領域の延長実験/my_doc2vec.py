@@ -25,44 +25,38 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 
 	sentence_list = []
 	tag_list = []
-	record_dict = {}
-	with gzip.open(f"{args.my_data_folder_path}/reference_genome/hg19.fa.gz", "rt") as handle:
-		record_dict = SeqIO.to_dict(SeqIO.parse(handle, "fasta")) # これで染色体名がkeyになります.
 
+	# record_dict = {}
+	# with gzip.open(f"{args.my_data_folder_path}/reference_genome/hg19.fa.gz", "rt") as handle:
+	# 	record_dict = SeqIO.to_dict(SeqIO.parse(handle, "fasta")) # これで染色体名がkeyになります.
 	for region_type in ["enhancer", "promoter"]:
 		print(f"{region_type}...")
 		region_missing_data_cnt = 0
 
-		extended_region_df = pd.read_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv", usecols=["chrom", "start_extended", "end_extended"])
-		for index, row_data in extended_region_df.iterrows():
-			tag = region_type + "_" + str(index)
-			seq_by_chrom = str(record_dict[row_data["chrom"]].seq)
-			complement_seq_by_chrom = str(record_dict[row_data["chrom"]].seq.complement())
-			target_seq = seq_by_chrom[row_data["start_extended"] : row_data["end_extended"]].lower()
-			target_complement_seq = complement_seq_by_chrom[row_data["start_extended"] : row_data["end_extended"]].lower()
-			# print(tag)
-			# print(target_seq)
-			# print(target_complement_seq)
-			# foo = ""
-
-			if target_seq.count("n") >= 0:
-				region_missing_data_cnt += 1
-				continue
-
-
-			if args.way_of_kmer == "normal":
-				tag_list.append(tag)
-				sentence_list.append(utils.make_kmer_list(args.k, args.stride, target_seq))
-				tag_list.append(tag)
-				sentence_list.append(utils.make_kmer_list(args.k, args.stride, target_complement_seq))
-			elif args.way_of_kmer == "random":
-				for _ in range(args.sentence_cnt):
+		bed_df = pd.read_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv", usecols=["name_origin"])
+		with open(f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa", "rt") as handle:
+			for record in SeqIO.parse(handle, "fasta"):
+				region_name = record.id.split("::")[0]
+				region_seq = str(record.seq)
+				region_complement_seq = str(record.seq.complement())
+				if region_seq.count("n") > 0:
+					region_missing_data_cnt += 1
+					continue
+				region_index = bed_df[bed_df["name_origin"] == region_name].index.tolist()[0]
+				tag = region_type + "_" + str(region_index)
+				if args.way_of_kmer == "normal":
 					tag_list.append(tag)
-					sentence_list.append(utils.make_random_kmer_list(args.k_min, args.k_max, target_seq))
+					sentence_list.append(utils.make_kmer_list(args.k, args.stride, region_seq))
 					tag_list.append(tag)
-					sentence_list.append(utils.make_random_kmer_list(args.k_min, args.k_max, target_complement_seq))
+					sentence_list.append(utils.make_kmer_list(args.k, args.stride, region_complement_seq))
+				elif args.way_of_kmer == "random":
+					for _ in range(args.sentence_cnt):
+						tag_list.append(tag)
+						sentence_list.append(utils.make_random_kmer_list(args.k_min, args.k_max, region_seq))
+						tag_list.append(tag)
+						sentence_list.append(utils.make_random_kmer_list(args.k_min, args.k_max, region_complement_seq))
 
-		print(f"{region_type} 全 {len(extended_region_df)}個 中 {region_missing_data_cnt}個 が学習から除外されました")
+		print(f"{region_type} 全 {len(bed_df)}個 中 {region_missing_data_cnt}個 が学習から除外されました")
 	# _____________________________________
 	corpus = []
 	for (tag, sentence) in zip(tag_list, sentence_list):

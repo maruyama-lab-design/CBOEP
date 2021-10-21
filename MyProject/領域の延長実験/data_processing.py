@@ -27,7 +27,23 @@ def create_extended_region_table(args, cell_line):
 		elif region_type == "promoter":
 			origin_bed_df["start_extended"] = origin_bed_df["start_origin"] - args.P_extended_left_length
 			origin_bed_df["end_extended"] = origin_bed_df["end_origin"] + args.P_extended_right_length
-		origin_bed_df.to_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv")
+		origin_bed_df.to_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv") # 上書き
+
+
+def make_bedfile_and_fastafile(args, cell_line):
+	for region_type in ["enhancer", "promoter"]:
+		bed_path = f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed"
+		with open(bed_path, "w") as bed_file:
+			bed_df = pd.read_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv")
+			for _, row_data in bed_df.iterrows():
+				bed_file.write(row_data["chrom"] + "\t" + str(row_data["start_extended"]) + "\t" + str(row_data["end_extended"]) + "\t" + row_data["name_origin"] + "\n")
+		
+		# reference genome
+		reference_genome_path = f"{args.my_data_folder_path}/reference_genome/hg19.fa"
+		# os.system を書かずにする方法はありそう
+		fasta_path = f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa"
+		os.system(f"bedtools getfasta -fi {reference_genome_path} -bed {bed_path} -fo {fasta_path} -name")
+			
 
 
 def create_region_sequence_unused(args, cell_line):
@@ -238,4 +254,5 @@ def create_promoter_bedfile_divided_from_tss_unused(args, cell_line):
 
 def create_region_sequence_and_table(args, cell_line):
 	create_extended_region_table(args, cell_line)
+	make_bedfile_and_fastafile(args, cell_line)
 	# create_region_table(args, cell_line)

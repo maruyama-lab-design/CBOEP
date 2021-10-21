@@ -36,11 +36,12 @@ def download_enhancer_and_promoter(args, cell_line):
 
 	
 def download_reference_genome(args):
+	# os.system を書かずにダウンロードしよう
+
 	# reference genome
 	print("リファレンスゲノムをダウンロード...")
 	url = f"{args.reference_genome_url}"
-	output_filename = f"{args.my_data_folder_path}/reference_genome/hg19.fa.gz"
-	os.system(f"wget {url} -O {output_filename}")
+	os.system(f"wget {url} -O {args.my_data_folder_path}/reference_genome/hg19.fa.gz")
 
 	# 読み込む際は以下参照
 	# with gzip.open(f"{output_filename}", "rt") as handle:
@@ -49,6 +50,6 @@ def download_reference_genome(args):
 	# 	foo = ""
 
 	# os.system(f"wget {args.reference_genome_url} -O {args.my_data_folder_path}/reference_genome/hg19.fa.gz")
-	# print("解凍...")
-	# os.system(f"gunzip -f {args.my_data_folder_path}/reference_genome/hg19.fa.gz")
+	print("解凍...")
+	os.system(f"gunzip -f {args.my_data_folder_path}/reference_genome/hg19.fa.gz")
 	
