@@ -34,17 +34,31 @@ def make_training_txt(args, cell_line):
 	promoter_bed_table = pd.read_csv(f"{args.my_data_folder_path}/bed/promoter/{cell_line}_promoters.bed.csv", usecols=["name_origin"])
 
 	train_csv = ""
-	if not os.path.isfile(f"{args.my_data_folder_path}/train/{cell_line}_train.csv"):
-		print("トレーニングデータが見つかりません. ダウンロードします.") # ep2vecよりダウンロード
-		train_csv = pd.read_csv(f"https://raw.githubusercontent.com/wanwenzeng/ep2vec/master/{cell_line}train.csv", usecols=["bin", "enhancer_name", "promoter_name", "label"])
+	print("トレーニングデータをダウンロードします.") # ep2vecよりダウンロード
+	train_csv = pd.read_csv(f"https://raw.githubusercontent.com/wanwenzeng/ep2vec/master/{cell_line}train.csv", usecols=["bin", "enhancer_name", "promoter_name", "label"])
 	train_csv.to_csv(f"{args.my_data_folder_path}/train/{cell_line}_train.csv")
 
 	# ペア情報を training.txt にメモ
 	fout = open('training.txt','w')
 	for _, row_data in train_csv.iterrows():
-		enhancer_index = enhancer_bed_table["name_origin"].index(row_data["enhancer_name"])
+		enhancer_index_list = enhancer_bed_table[enhancer_bed_table["name_origin"] == row_data["enhancer_name"]].index.tolist()
+		if len(enhancer_index_list) > 1:
+			print("エラー!!")
+			exit()
+		elif len(enhancer_index_list) == 0:
+			print(row_data["enhancer_name"])
+			continue
+		enhancer_index = enhancer_index_list[0]
 		enhancer_tag = "enhancer_" + str(enhancer_index)
-		promoter_index = promoter_bed_table["name_origin"].index(row_data["promoter_name"])
+
+		promoter_index_list = promoter_bed_table[promoter_bed_table["name_origin"] == row_data["promoter_name"]].index.tolist()
+		if len(promoter_index_list) > 1:
+			print("エラー!!")
+			exit()
+		elif len(promoter_index_list) == 0:
+			print(row_data["promoter_name"])
+			continue
+		promoter_index = promoter_index_list[0]
 		promoter_tag = "promoter_" + str(promoter_index)
 		label = row_data["label"]
 
@@ -128,13 +142,13 @@ def train(args, cell_line):
 
 	# X = np.zeros((positive_num + negative_num, args.embedding_vector_dimention*2)) # X (従属変数 後に EnhとPrmの embedding vector が入る)
 	# Y = np.zeros(positive_num+negative_num) # Y (目的変数 後に ペア情報{0 or 1}が入る)
-	X = np.empty(0, args.embedding_vector_dimention * 2)
+	X = np.empty((0, args.embedding_vector_dimention * 2))
 	Y = np.empty(0)
 
 	if args.share_doc2vec: #エンハンサーとプロモーター共存
 		# paragraph vector モデルのロード
 		model = Doc2Vec.load(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
-		paragraph_tag_list = list(model.dv.doctags)
+		paragraph_tag_list = list(model.dv.index_to_key)
 		# メモしておいたペア情報を使う
 		fin = open('training.txt','r')
 		for i, line in enumerate(fin):
@@ -151,7 +165,7 @@ def train(args, cell_line):
 			enhancer_vec = enhancer_vec.reshape((1,args.embedding_vector_dimention))
 			promoter_vec = promoter_vec.reshape((1,args.embedding_vector_dimention))
 			concat_vec = np.column_stack((enhancer_vec,promoter_vec))
-			X = np.append(X, concat_vec)
+			X = np.append(X, concat_vec, axis=0)
 			Y = np.append(Y, label) # 正例か負例か
 	else: # エンハンサーとプロモーター別々
 		# paragraph vector モデルのロード
@@ -177,7 +191,7 @@ def train(args, cell_line):
 			enhancer_vec = enhancer_vec.reshape((1,args.embedding_vector_dimention))
 			promoter_vec = promoter_vec.reshape((1,args.embedding_vector_dimention))
 			concat_vec = np.column_stack((enhancer_vec,promoter_vec))
-			X = np.append(X, concat_vec)
+			X = np.append(X, concat_vec, axis=0)
 			Y = np.append(Y, label) # 正例か負例か
 
 	

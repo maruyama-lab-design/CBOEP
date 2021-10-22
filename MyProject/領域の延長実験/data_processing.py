@@ -8,6 +8,8 @@ import itertools
 import os
 import argparse
 
+import pybedtools
+
 # classifier
 from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.neighbors import KNeighborsClassifier
@@ -41,8 +43,12 @@ def make_bedfile_and_fastafile(args, cell_line):
 		# reference genome
 		reference_genome_path = f"{args.my_data_folder_path}/reference_genome/hg19.fa"
 		# os.system を書かずにする方法はありそう
-		fasta_path = f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa"
-		os.system(f"bedtools getfasta -fi {reference_genome_path} -bed {bed_path} -fo {fasta_path} -name")
+		output_fasta_path = f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa"
+		bed = pybedtools.BedTool(bed_path)
+		seq = bed.sequence(fi=reference_genome_path, name=True)
+		with open(output_fasta_path, "w") as f:
+			f.write(open(seq.seqfn).read())
+		# os.system(f"bedtools getfasta -fi {reference_genome_path} -bed {bed_path} -fo {fasta_path} -name")
 			
 
 

@@ -3,13 +3,12 @@ from gensim.models.doc2vec import TaggedDocument
 from gensim.models import Doc2Vec
 import pandas as pd
 import numpy as np
-import requests
+import urllib.request
 import gzip
 from Bio import SeqIO
 
 import os
 import argparse
-import urllib.request
 
 
 # classifier
@@ -19,37 +18,19 @@ from sklearn.ensemble import GradientBoostingClassifier
 
 def download_enhancer_and_promoter(args, cell_line):
 	# enhancer
-	print("エンハンサーをダウンロード...")
-	url = f"{args.targetfinder_data_root_url}/{cell_line}/output-ep/enhancers.bed"
-	enhancers_bed_df = pd.read_csv(url,sep="\t")
-	enhancers_bed_df.columns = ["chrom", "start_origin", "end_origin", "name_origin"]
-	# enhancers_bed = enhancers_bed.rename(index=lambda i: "ENHANCER_" + str(i))
-	enhancers_bed_df.to_csv(f"{args.my_data_folder_path}/bed/enhancer/{cell_line}_enhancers.bed.csv")
-
-	# promoter
-	print("プロモーターをダウンロード...")
-	url = f"{args.targetfinder_data_root_url}/{cell_line}/output-ep/promoters.bed"
-	promoters_bed_df = pd.read_csv(url,sep="\t")
-	promoters_bed_df.columns = ["chrom", "start_origin", "end_origin", "name_origin"]
-	# enhancers_bed = enhancers_bed.rename(index=lambda i: "ENHANCER_" + str(i))
-	promoters_bed_df.to_csv(f"{args.my_data_folder_path}/bed/promoter/{cell_line}_promoters.bed.csv")
+	for region_type in ["enhancer", "promoter"]:
+		print(f"{region_type}　downloading...")
+		url = f"{args.targetfinder_data_root_url}/{cell_line}/output-ep/{region_type}s.bed"
+		bed_df = pd.read_csv(url,sep="\t")
+		bed_df.columns = ["chrom", "start_origin", "end_origin", "name_origin"]
+		bed_df.to_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv", index=False)
 
 	
 def download_reference_genome(args):
-	# os.system を書かずにダウンロードしよう
-
 	# reference genome
-	print("リファレンスゲノムをダウンロード...")
+	print("reference genome downloading...")
 	url = f"{args.reference_genome_url}"
-	os.system(f"wget {url} -O {args.my_data_folder_path}/reference_genome/hg19.fa.gz")
-
-	# 読み込む際は以下参照
-	# with gzip.open(f"{output_filename}", "rt") as handle:
-	# 	for record in SeqIO.parse(handle, "fasta"):
-	# 		print(record.id) # -> chr1 chr2 ... 
-	# 	foo = ""
-
-	# os.system(f"wget {args.reference_genome_url} -O {args.my_data_folder_path}/reference_genome/hg19.fa.gz")
+	urllib.request.urlretrieve(url, f"{args.my_data_folder_path}/reference_genome/hg19.fa.gz")
 	print("解凍...")
-	os.system(f"gunzip -f {args.my_data_folder_path}/reference_genome/hg19.fa.gz")
-	
+	with gzip.open(f"{args.my_data_folder_path}/reference_genome/hg19.fa.gz", "rt") as fin, open(f"{args.my_data_folder_path}/reference_genome/hg19.fa", "w") as fout:
+		fout.write((fin.read()))

@@ -35,6 +35,7 @@ def my_project(args, cell_line):
 	# リファレンスゲノムのダウンロード
 	if args.download_reference_genome:
 		data_download.download_reference_genome(args)
+		args.download_reference_genome = False # 一回のみ
 
 	# エンハンサープロモーターのダウンロード
 	data_download.download_enhancer_and_promoter(args, cell_line)

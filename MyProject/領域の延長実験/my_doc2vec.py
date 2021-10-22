@@ -26,9 +26,6 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 	sentence_list = []
 	tag_list = []
 
-	# record_dict = {}
-	# with gzip.open(f"{args.my_data_folder_path}/reference_genome/hg19.fa.gz", "rt") as handle:
-	# 	record_dict = SeqIO.to_dict(SeqIO.parse(handle, "fasta")) # これで染色体名がkeyになります.
 	for region_type in ["enhancer", "promoter"]:
 		print(f"{region_type}...")
 		region_missing_data_cnt = 0
@@ -36,13 +33,15 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 		bed_df = pd.read_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv", usecols=["name_origin"])
 		with open(f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa", "rt") as handle:
 			for record in SeqIO.parse(handle, "fasta"):
-				region_name = record.id.split("::")[0]
+				fasta_region_name = record.id.split("::")[0]
 				region_seq = str(record.seq)
 				region_complement_seq = str(record.seq.complement())
-				if region_seq.count("n") > 0:
+
+				if region_seq.count("n") > 0: # 配列にnが含まれていたら除く
 					region_missing_data_cnt += 1
 					continue
-				region_index = bed_df[bed_df["name_origin"] == region_name].index.tolist()[0]
+
+				region_index = bed_df[bed_df["name_origin"] == fasta_region_name].index.tolist()[0]
 				tag = region_type + "_" + str(region_index)
 				if args.way_of_kmer == "normal":
 					tag_list.append(tag)
