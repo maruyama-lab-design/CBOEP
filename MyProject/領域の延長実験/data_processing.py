@@ -4,9 +4,16 @@ from gensim.models import Doc2Vec
 import pandas as pd
 import numpy as np
 import itertools
+import tqdm
 
 import os
 import argparse
+
+import gzip
+
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
 import pybedtools
 
@@ -16,40 +23,101 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 
 
-def create_extended_region_table(args, cell_line):
-	# -----説明-----
-	# table data の確認，カラムの修正だけ
-	# -------------
-
+def make_extended_bedfile(args, cell_line):
+	# エンハンサー，プロモーターの延長後の領域を記録したbedファイルを作成
+	# paragraph tag もこのbedファイルに付与しておく
 	for region_type in ["enhancer", "promoter"]:
-		origin_bed_df = pd.read_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv")
-		if region_type == "enhancer":
-			origin_bed_df["start_extended"] = origin_bed_df["start_origin"] - args.E_extended_left_length
-			origin_bed_df["end_extended"] = origin_bed_df["end_origin"] + args.E_extended_right_length
-		elif region_type == "promoter":
-			origin_bed_df["start_extended"] = origin_bed_df["start_origin"] - args.P_extended_left_length
-			origin_bed_df["end_extended"] = origin_bed_df["end_origin"] + args.P_extended_right_length
-		origin_bed_df.to_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv") # 上書き
+		origin_bed_df = pd.read_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv") # original data
+		extended_bed_path = f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed"
+
+		print(f"{region_type} make extended bed")
+		with open(extended_bed_path, "w") as fout:
+			for index, row_data in tqdm.tqdm(origin_bed_df.iterrows()):
+				start, end = -1, -1 # 初期化
+				chrom = row_data["chrom"]
+				name = row_data["name_origin"]
+
+				if region_type == "enhancer":
+					start = row_data["start_origin"] - args.E_extended_left_length
+					end = row_data["end_origin"] + args.E_extended_right_length
+				elif region_type == "promoter":
+					start = row_data["start_origin"] - args.P_extended_left_length
+					end = row_data["end_origin"] + args.P_extended_right_length
+
+				paragraph_tag = region_type + "_" + str(index) # enhancer_0 など
+				fout.write(f"{chrom}\t{start}\t{end}\t{paragraph_tag}~{name}\n")
 
 
-def make_bedfile_and_fastafile(args, cell_line):
+def make_extended_fastafile(args, cell_line):
 	for region_type in ["enhancer", "promoter"]:
-		bed_path = f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed"
-		with open(bed_path, "w") as bed_file:
-			bed_df = pd.read_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv")
-			for _, row_data in bed_df.iterrows():
-				bed_file.write(row_data["chrom"] + "\t" + str(row_data["start_extended"]) + "\t" + str(row_data["end_extended"]) + "\t" + row_data["name_origin"] + "\n")
-		
-		# reference genome
 		reference_genome_path = f"{args.my_data_folder_path}/reference_genome/hg19.fa"
-		# os.system を書かずにする方法はありそう
-		output_fasta_path = f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa"
+		if os.path.exists(reference_genome_path) == False:
+			# reference genome の解凍　解凍しなくてもgetfastaする方法を模索中
+			print("unzip reference genome...")
+			with gzip.open(reference_genome_path + ".gz", "rt") as fin, open(reference_genome_path, "w") as fout:
+				fout.write(fin.read())
+			print("unzipped!!")
+
+		bed_path = f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed"
+		fasta_path = f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa"
 		bed = pybedtools.BedTool(bed_path)
-		seq = bed.sequence(fi=reference_genome_path, name=True)
-		with open(output_fasta_path, "w") as f:
-			f.write(open(seq.seqfn).read())
-		# os.system(f"bedtools getfasta -fi {reference_genome_path} -bed {bed_path} -fo {fasta_path} -name")
+		print(f"{region_type} bed to fasta...")
+		seq = bed.sequence(fi=reference_genome_path, nameOnly=True) # ここで切り出しているらしい
+		with open(fasta_path, "w") as fout:
+			fout.write(open(seq.seqfn).read())
+
+
+def make_bedfile_and_fastafile_unused(args, cell_line):
+	# 前工程で作成したcsvファイルをもとに，エンハンサー，プロモーターの延長後の配列をfastaファイルに切り出す
+	print("fastaに切り出します")
+	hg19_fasta = gzip.open(f"{args.my_data_folder_path}/reference_genome/hg19.fa.gz", "rt")
+	record_dict = SeqIO.to_dict(SeqIO.parse(hg19_fasta, "fasta"))
+	hg19_fasta.close() # メモリ管理のため
+	for region_type in ["enhancer", "promoter"]:
+		print(f"{region_type}...")
+		bed_df = pd.read_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv")
+		output_fasta_path = f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa"
+		short_seq_records = []
+		for index, row_data in tqdm.tqdm(bed_df.iterrows()):
+			chrom = row_data["chrom"]
+			start = row_data["start_origin"]
+			end = row_data["end_origin"]
+			if region_type == "enhancer":
+				start -= args.E_extended_left_length
+				end += args.E_extended_right_length
+			elif region_type == "promoter":
+				start -= args.P_extended_left_length
+				end += args.P_extended_right_length
+			long_seq = record_dict[chrom].seq
+			short_seq = str(long_seq)[start:end]
+			short_seq_record = SeqRecord(Seq(short_seq), id=row_data["name_origin"], description="")
+			short_seq_records.append(short_seq_record)
+
+		with open(output_fasta_path, "w") as fout:
+			SeqIO.write(short_seq_records, fout, "fasta")
 			
+
+def edit_fastafile(args, cell_line):
+	# 配列内の欠損データを削除したり，配列内の文字を全て小文字にしたりします．
+	# また，配列のcomplementも追加します．
+	for region_type in ["enhancer", "promoter"]:
+
+		input_fasta_path = f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa"
+		output_fasta_path = f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s_editted.fa"
+
+		print(f"{region_type} edit fasta...")
+		with open(input_fasta_path, "r") as fin, open(output_fasta_path, "w") as fout:
+			for record in SeqIO.parse(fin, "fasta"):
+				seq = str(record.seq).lower()
+				if str(record.seq).count("n") > 0: # 欠損配列を除外
+					continue
+				complement_seq = str(record.seq.complement()).lower()
+
+				fout.write(">" + str(record.id) + "\n")
+				fout.write(seq + "\n")
+				fout.write(">" + str(record.id) + " complement" + "\n") # complement 配列
+				fout.write(complement_seq + "\n")
+	# foo = 0
 
 
 def create_region_sequence_unused(args, cell_line):
@@ -259,6 +327,6 @@ def create_promoter_bedfile_divided_from_tss_unused(args, cell_line):
 
 
 def create_region_sequence_and_table(args, cell_line):
-	create_extended_region_table(args, cell_line)
-	make_bedfile_and_fastafile(args, cell_line)
-	# create_region_table(args, cell_line)
+	make_extended_bedfile(args, cell_line)
+	make_extended_fastafile(args, cell_line)
+	edit_fastafile(args, cell_line)

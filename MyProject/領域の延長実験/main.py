@@ -28,19 +28,21 @@ from make_args_logfile import make_args_logfile
 
 def my_project(args, cell_line):
 
+	print("実験開始")
+	args.output = f"{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)},kmer={args.way_of_kmer},N={args.sentence_cnt}"
+	print(f"output = {args.output}")
+
 	# 必要なディレクトリの作成
 	if args.make_directory:
 		make_directory(args)
 
 	# リファレンスゲノムのダウンロード
 	if args.download_reference_genome:
-		data_download.download_reference_genome(args)
+		# data_download.download_reference_genome(args)
 		args.download_reference_genome = False # 一回のみ
 
 	# エンハンサープロモーターのダウンロード
 	data_download.download_enhancer_and_promoter(args, cell_line)
-
-	args.output = f"{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)},kmer={args.way_of_kmer},N={args.sentence_cnt}"
 
 	# if os.path.exists(args.output): # 存在してたらスキップ
 	# 	print(args.output + " スキップ")

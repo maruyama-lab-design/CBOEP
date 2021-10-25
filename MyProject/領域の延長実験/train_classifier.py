@@ -17,6 +17,8 @@ from sklearn.ensemble import GradientBoostingClassifier
 
 from t_sne import t_SNE
 
+import data_download
+
 
 def make_training_txt(args, cell_line):
 	# 分類器学習の際の前処理
@@ -33,19 +35,20 @@ def make_training_txt(args, cell_line):
 	enhancer_bed_table = pd.read_csv(f"{args.my_data_folder_path}/bed/enhancer/{cell_line}_enhancers.bed.csv", usecols=["name_origin"])
 	promoter_bed_table = pd.read_csv(f"{args.my_data_folder_path}/bed/promoter/{cell_line}_promoters.bed.csv", usecols=["name_origin"])
 
-	train_csv = ""
-	print("トレーニングデータをダウンロードします.") # ep2vecよりダウンロード
-	train_csv = pd.read_csv(f"https://raw.githubusercontent.com/wanwenzeng/ep2vec/master/{cell_line}train.csv", usecols=["bin", "enhancer_name", "promoter_name", "label"])
-	train_csv.to_csv(f"{args.my_data_folder_path}/train/{cell_line}_train.csv")
+	# print("トレーニングデータをダウンロードします.") # ep2vecよりダウンロード
+	# train_csv = pd.read_csv(f"https://raw.githubusercontent.com/wanwenzeng/ep2vec/master/{cell_line}train.csv", usecols=["bin", "enhancer_name", "promoter_name", "label"])
+	# train_csv.to_csv(f"{args.my_data_folder_path}/train/{cell_line}_train.csv")
+	data_download.download_training_data(args, cell_line)
+	train_csv = pd.read_csv(f"{args.my_data_folder_path}/train/{cell_line}_train.csv")
 
 	# ペア情報を training.txt にメモ
 	fout = open('training.txt','w')
 	for _, row_data in train_csv.iterrows():
 		enhancer_index_list = enhancer_bed_table[enhancer_bed_table["name_origin"] == row_data["enhancer_name"]].index.tolist()
-		if len(enhancer_index_list) > 1:
+		if len(enhancer_index_list) > 1: # ありえないが一応
 			print("エラー!!")
 			exit()
-		elif len(enhancer_index_list) == 0:
+		elif len(enhancer_index_list) == 0: # たまにトレーニングデータに書かれている領域がない場合がある
 			print(row_data["enhancer_name"])
 			continue
 		enhancer_index = enhancer_index_list[0]
@@ -135,30 +138,26 @@ def make_training_txt_unused(args, cell_line):
 
 
 def train(args, cell_line):
-	global positive_num, negative_num
 	make_training_txt(args, cell_line)
+	print("training classifier...")
 
-	print("分類器を学習します.")
-
-	# X = np.zeros((positive_num + negative_num, args.embedding_vector_dimention*2)) # X (従属変数 後に EnhとPrmの embedding vector が入る)
-	# Y = np.zeros(positive_num+negative_num) # Y (目的変数 後に ペア情報{0 or 1}が入る)
 	X = np.empty((0, args.embedding_vector_dimention * 2))
 	Y = np.empty(0)
 
 	if args.share_doc2vec: #エンハンサーとプロモーター共存
 		# paragraph vector モデルのロード
 		model = Doc2Vec.load(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
-		paragraph_tag_list = list(model.dv.index_to_key)
+		# paragraph_tag_list = list(model.dv.index_to_key)
 		# メモしておいたペア情報を使う
 		fin = open('training.txt','r')
-		for i, line in enumerate(fin):
+		for _, line in enumerate(fin):
 			data = line.strip().split()
 			enhancer_tag = data[0] # "ENHANCER_0" などのembedding vector タグ
 			promoter_tag = data[1] # "PROMOTER_0" などのembedding vector タグ
 			label = int(data[2])
 
-			if (enhancer_tag not in paragraph_tag_list) or (promoter_tag not in paragraph_tag_list):
-				continue
+			# if (enhancer_tag not in paragraph_tag_list) or (promoter_tag not in paragraph_tag_list):
+			# 	continue
 
 			enhancer_vec = model.dv[enhancer_tag] # エンハンサーのembedding vector
 			promoter_vec = model.dv[promoter_tag] # プロモーターのembedding vector
@@ -183,8 +182,8 @@ def train(args, cell_line):
 			promoter_tag = data[1] # "PROMOTER_0" などのembedding vector タグ
 			label = int(data[2])
 
-			if (enhancer_tag not in enhancer_paragraph_tag_list) or (promoter_tag not in promoter_paragraph_tag_list):
-				continue
+			# if (enhancer_tag not in enhancer_paragraph_tag_list) or (promoter_tag not in promoter_paragraph_tag_list):
+			# 	continue
 
 			enhancer_vec = enhancer_model.dv[enhancer_tag] # エンハンサーのembedding vector
 			promoter_vec = promoter_model.dv[promoter_tag] # プロモーターのembedding vector
@@ -198,12 +197,15 @@ def train(args, cell_line):
 
 	# 分類器を用意
 	estimator = GradientBoostingClassifier(n_estimators = 4000, learning_rate = 0.001, max_depth = 25, max_features = 'log2', random_state = 0)
-	# estimator = KNeighborsClassifier(n_neighbors=5)
+	# estimator = KNeighborsClassifier(n_neighbors=5) # k近傍法
+
+	# t_sneにて図示
+	t_SNE(args, X, Y)
 
 	# 評価する指標
 	score_funcs = ['f1', 'roc_auc', 'average_precision']
 	cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=0)
-	print("分類器学習中...")
+	print("training classifier...")
 	scores = cross_validate(estimator, X, Y, scoring = score_funcs, cv = cv, n_jobs = -1) # ここで学習開始
 
 	# 得られた指標を出力する & 結果の記録
@@ -224,7 +226,5 @@ def train(args, cell_line):
 		},
 		index = ["1-fold", "2-fold", "3-fold", "4-fold", "5-fold", "6-fold", "7-fold", "8-fold", "9-fold", "10-fold", "mean"]	
 	)
+	
 	result.to_csv(f"{args.my_data_folder_path}/result/{args.output}.csv") # 結果をcsvで保存
-
-	# t_sneにて図示
-	t_SNE(args, X, Y)

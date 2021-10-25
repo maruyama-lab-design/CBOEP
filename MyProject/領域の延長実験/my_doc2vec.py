@@ -24,6 +24,88 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 	print("doc2vec のための前処理 開始")
 
 	sentence_list = []
+	paragraph_tag_list = []
+
+	for region_type in ["enhancer", "promoter"]:
+		print(f"{region_type} doc2vec preprocessing...")
+
+		with open(f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa", "rt") as fin: # fastafile の読みこみ
+			for record in SeqIO.parse(fin, "fasta"):
+				paragraph_tag = record.id.split("~")[0]
+				region_seq = str(record.seq)
+
+				if args.way_of_kmer == "normal": #固定長k-mer
+					paragraph_tag_list.append(paragraph_tag)
+					sentence_list.append(utils.make_kmer_list(args.k, args.stride, region_seq))
+				elif args.way_of_kmer == "random": #ランダム長k-mer
+					for _ in range(args.sentence_cnt):
+						paragraph_tag_list.append(paragraph_tag)
+						sentence_list.append(utils.make_random_kmer_list(args.k_min, args.k_max, region_seq))
+	# _____________________________________
+	corpus = []
+	for (tag, sentence) in zip(paragraph_tag_list, sentence_list):
+		corpus.append(TaggedDocument(sentence, [tag])) # doc2vec前のsentenceへのtagつけ
+
+	print(f"doc2vec training...")
+	model = Doc2Vec(min_count=1, window=10, vector_size=args.embedding_vector_dimention, sample=1e-4, negative=5, workers=8, epochs=10)
+	model.build_vocab(corpus) # 単語の登録
+	model.train(
+		corpus,
+		total_examples=model.corpus_count,
+		epochs=model.epochs
+	)
+	print("doc2vec 終了")
+	model.save(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
+
+
+
+def make_paragraph_vector_from_enhancer_and_promoter_unused(args, cell_line):
+	print(f"{cell_line} のエンハンサーとプロモーターの両方を1つのdoc2vecで学習します")
+	print("doc2vec のための前処理 開始")
+
+	sentence_list = []
+	tag_list = []
+
+	for region_type in ["enhancer", "promoter"]:
+		print(f"{region_type}...")
+
+		bed_df = pd.read_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv", usecols=["name_origin"])
+		with open(f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa", "rt") as fin: # fastafile の読みこみ
+			for record in SeqIO.parse(fin, "fasta"):
+				fasta_region_name = record.id.split("::")[0].replace("\n", "") # region name を fastafileから取得
+				region_seq = str(record.seq)
+
+				region_index = bed_df[bed_df["name_origin"] == fasta_region_name].index.tolist()[0] # regionはbed_dfの何番目のindexか
+				tag = region_type + "_" + str(region_index) # enhancer_0 など
+				if args.way_of_kmer == "normal":
+					tag_list.append(tag)
+					sentence_list.append(utils.make_kmer_list(args.k, args.stride, region_seq))
+				elif args.way_of_kmer == "random":
+					for _ in range(args.sentence_cnt):
+						tag_list.append(tag)
+						sentence_list.append(utils.make_random_kmer_list(args.k_min, args.k_max, region_seq))
+	# _____________________________________
+	corpus = []
+	for (tag, sentence) in zip(tag_list, sentence_list):
+		corpus.append(TaggedDocument(sentence, [tag])) # doc2vec前のsentenceへのtagつけ
+
+	print(f"doc2vec 学習...")
+	model = Doc2Vec(min_count=1, window=10, vector_size=args.embedding_vector_dimention, sample=1e-4, negative=5, workers=8, epochs=10)
+	model.build_vocab(corpus) # 単語の登録
+	model.train(
+		corpus,
+		total_examples=model.corpus_count,
+		epochs=model.epochs
+	)
+	print("終了")
+	model.save(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
+
+
+def make_paragraph_vector_from_enhancer_and_promoter_unused(args, cell_line):
+	print(f"{cell_line} のエンハンサーとプロモーターの両方を1つのdoc2vecで学習します")
+	print("doc2vec のための前処理 開始")
+
+	sentence_list = []
 	tag_list = []
 
 	for region_type in ["enhancer", "promoter"]:
@@ -31,13 +113,14 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 		region_missing_data_cnt = 0
 
 		bed_df = pd.read_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv", usecols=["name_origin"])
-		with open(f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa", "rt") as handle:
-			for record in SeqIO.parse(handle, "fasta"):
-				fasta_region_name = record.id.split("::")[0]
+		with open(f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa", "rt") as fin: # fastafile の読みこみ
+			for record in SeqIO.parse(fin, "fasta"):
+				fasta_region_name = record.id.split("::")[0].replace("\n", "")
 				region_seq = str(record.seq)
 				region_complement_seq = str(record.seq.complement())
 
 				if region_seq.count("n") > 0: # 配列にnが含まれていたら除く
+					# n がある物を省く関数を用意
 					region_missing_data_cnt += 1
 					continue
 

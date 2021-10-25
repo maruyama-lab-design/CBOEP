@@ -31,6 +31,9 @@ def download_reference_genome(args):
 	print("reference genome downloading...")
 	url = f"{args.reference_genome_url}"
 	urllib.request.urlretrieve(url, f"{args.my_data_folder_path}/reference_genome/hg19.fa.gz")
-	print("解凍...")
-	with gzip.open(f"{args.my_data_folder_path}/reference_genome/hg19.fa.gz", "rt") as fin, open(f"{args.my_data_folder_path}/reference_genome/hg19.fa", "w") as fout:
-		fout.write((fin.read()))
+
+def download_training_data(args, cell_line):
+	print("training data downloading...")
+	url = f"https://raw.githubusercontent.com/wanwenzeng/ep2vec/master/{cell_line}train.csv"
+	df = pd.read_csv(url, usecols=["bin", "enhancer_name", "promoter_name", "label"])
+	df.to_csv(f"{args.my_data_folder_path}/train/{cell_line}_train.csv", index=False)
