@@ -28,8 +28,8 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 
 	for region_type in ["enhancer", "promoter"]:
 		print(f"{region_type} doc2vec preprocessing...")
-
-		with open(f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa", "rt") as fin: # fastafile の読みこみ
+		input_fasta_path = os.path.join(args.my_data_folder_path, "fasta", region_type, f"{cell_line}_{region_type}s_editted.fa")
+		with open(input_fasta_path, "rt") as fin: # fastafile の読みこみ
 			for record in SeqIO.parse(fin, "fasta"):
 				paragraph_tag = record.id.split("~")[0]
 				region_seq = str(record.seq)
@@ -49,13 +49,14 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 	print(f"doc2vec training...")
 	model = Doc2Vec(min_count=1, window=10, vector_size=args.embedding_vector_dimention, sample=1e-4, negative=5, workers=8, epochs=10)
 	model.build_vocab(corpus) # 単語の登録
-	model.train(
+	model.train( # ここで学習開始
 		corpus,
 		total_examples=model.corpus_count,
 		epochs=model.epochs
 	)
 	print("doc2vec 終了")
-	model.save(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
+	d2v_model_path = os.path.join(args.my_data_folder_path, "d2v", f"{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
+	model.save(d2v_model_path)
 
 
 
@@ -101,7 +102,7 @@ def make_paragraph_vector_from_enhancer_and_promoter_unused(args, cell_line):
 	model.save(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
 
 
-def make_paragraph_vector_from_enhancer_and_promoter_unused(args, cell_line):
+def make_paragraph_vector_from_enhancer_and_promoter_unused2(args, cell_line):
 	print(f"{cell_line} のエンハンサーとプロモーターの両方を1つのdoc2vecで学習します")
 	print("doc2vec のための前処理 開始")
 
@@ -156,7 +157,7 @@ def make_paragraph_vector_from_enhancer_and_promoter_unused(args, cell_line):
 	model.save(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
 
 
-def make_paragraph_vector_from_enhancer_and_promoter_unused(args, cell_line):
+def make_paragraph_vector_from_enhancer_and_promoter_unused3(args, cell_line):
 	print(f"{cell_line} のエンハンサーとプロモーターの両方を1つのdoc2vecで学習します")
 	print("doc2vec のための前処理 開始")
 
