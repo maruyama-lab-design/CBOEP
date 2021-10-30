@@ -49,8 +49,11 @@ def make_extended_bedfile(args, cell_line):
 
 
 def make_extended_fastafile(args, cell_line):
+	# エンハンサー，プロモーターの延長後の領域を記録したfastaファイルを作成
+	# pybedtools で bed -> fasta
 	for region_type in ["enhancer", "promoter"]:
 		reference_genome_path = f"{args.my_data_folder_path}/reference_genome/hg19.fa"
+
 		if os.path.exists(reference_genome_path) == False:
 			# reference genome の解凍　解凍しなくてもgetfastaする方法を模索中
 			print("unzip reference genome...")
@@ -59,11 +62,11 @@ def make_extended_fastafile(args, cell_line):
 			print("unzipped!!")
 
 		bed_path = f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed"
-		fasta_path = f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa"
+		output_fasta_path = f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa"
 		bed = pybedtools.BedTool(bed_path)
 		print(f"{region_type} bed to fasta...")
 		seq = bed.sequence(fi=reference_genome_path, nameOnly=True) # ここで切り出しているらしい
-		with open(fasta_path, "w") as fout:
+		with open(output_fasta_path, "w") as fout:
 			fout.write(open(seq.seqfn).read())
 
 
@@ -117,7 +120,6 @@ def edit_fastafile(args, cell_line):
 				fout.write(seq + "\n")
 				fout.write(">" + str(record.id) + " complement" + "\n") # complement 配列
 				fout.write(complement_seq + "\n")
-	# foo = 0
 
 
 def create_region_sequence_unused(args, cell_line):

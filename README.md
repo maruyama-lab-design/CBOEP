@@ -3,7 +3,9 @@
 ## TargetFinderにあるエンハンサー・プロモーターの領域を延長し，各配列をdoc2vecによる分散表現によって相互作用を予測するモデル
 
 extended_region_researchディレクトリ内のmain.pyを実行してください．
-必要な引数を指定してください．
+
+###引数###
+
 ```-my_data_folder_path```
 必要なデータがこのフォルダーをルートパスとして生成されます．必ず指定してください
 
@@ -50,4 +52,5 @@ k-merの切り方("normal" or "random")
 ```--k_max```
 ```way_of_kmer```がrandomの場合のk_max
 
-実行例
+###実行例###  
+```main.py -my_data_folder_path /Users/ylwrvr/卒論/Koga_code/MyProject/data --cell_line_list GM12878 --make_directory --download_reference_genome --share_doc2vec ```

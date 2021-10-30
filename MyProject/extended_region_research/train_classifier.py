@@ -22,20 +22,10 @@ import data_download
 
 def make_training_df(args, cell_line):
 	# 分類器学習の際の前処理
-	# textfileにてペア情報を書き込む
-	# ___training.txt_________________
-	#	ENHANCER_521	PROMOTER_61		1
-	# 	ENHANCER_1334	PROMOTER_129	1
-	# 	ENHANCER_1335	PROMOTER_129	1
-	#	:				:				:
-	# ________________________________
-
 	
-	# 前工程で作ったcsvを読み込む
-	enhancer_bed_table = pd.read_csv(f"{args.my_data_folder_path}/bed/enhancer/{cell_line}_enhancers.bed.csv", usecols=["name_origin"])
-	promoter_bed_table = pd.read_csv(f"{args.my_data_folder_path}/bed/promoter/{cell_line}_promoters.bed.csv", usecols=["name_origin"])
-
-	# トレーニングデータダウンロード & 読み込み
+	print("トレーニングデータをcsvファイルにて書き込み開始")
+	
+	# トレーニングデータをtargetfinderからダウンロード & 読み込み
 	data_download.download_training_data(args, cell_line)
 	train_path = os.path.join(args.my_data_folder_path, "train", f"{cell_line}_train.csv")
 	train_df = pd.read_csv(train_path, usecols=["enhancer_name", "promoter_name", "label"])
@@ -61,6 +51,7 @@ def make_training_df(args, cell_line):
 				train_df["promoter_tag"][train_index_list] = "promoter_" + str(region_index)
 
 	train_df.to_csv(train_path)
+	print("トレーニングデータをcsvファイルにて書き込み終了")
 			
 
 
@@ -182,7 +173,6 @@ def make_training_txt_unused2(args, cell_line):
 
 def train(args, cell_line):
 	make_training_df(args, cell_line)
-	print("training classifier...")
 
 	X = np.empty((0, args.embedding_vector_dimention * 2))
 	Y = np.empty(0)

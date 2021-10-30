@@ -23,7 +23,7 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 	print(f"{cell_line} のエンハンサーとプロモーターの両方を1つのdoc2vecで学習します")
 	print("doc2vec のための前処理 開始")
 
-	sentence_list = []
+	sentence_list = [] # numpy にしてみる
 	paragraph_tag_list = []
 
 	for region_type in ["enhancer", "promoter"]:
@@ -38,7 +38,7 @@ def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 					paragraph_tag_list.append(paragraph_tag)
 					sentence_list.append(utils.make_kmer_list(args.k, args.stride, region_seq))
 				elif args.way_of_kmer == "random": #ランダム長k-mer
-					for _ in range(args.sentence_cnt):
+					for _ in range(args.sentence_cnt): # 100 がギリ
 						paragraph_tag_list.append(paragraph_tag)
 						sentence_list.append(utils.make_random_kmer_list(args.k_min, args.k_max, region_seq))
 	# _____________________________________
