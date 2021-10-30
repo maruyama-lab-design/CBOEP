@@ -53,4 +53,4 @@ k-merの切り方("normal" or "random")
 ```way_of_kmer```がrandomの場合のk_max
 
 ### 実行例 ###  
-```main.py -my_data_folder_path /Users/ylwrvr/卒論/Koga_code/MyProject/data --cell_line_list GM12878 --make_directory --download_reference_genome --share_doc2vec ```
+```main.py -my_data_folder_path /Users/ylwrvr/卒論/Koga_code/data --cell_line_list GM12878 --make_directory --download_reference_genome --share_doc2vec ```

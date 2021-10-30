@@ -1,6 +1,6 @@
 .vscode/*
-MyProject/data
-MyProject/test
+data
+test
 *.json
 *.pyc
 *.txt
