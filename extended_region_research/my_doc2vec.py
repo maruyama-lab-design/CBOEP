@@ -19,6 +19,64 @@ from sklearn.ensemble import GradientBoostingClassifier
 # 自作関数
 import utils
 
+def make_input_txt_for_doc2vec(args, cell_line):
+    enhancer_filename = f"{args.my_data_folder_path}/fasta/enhancef/{cell_line}_enhancers_editted.fa"
+    promoter_filename = f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_promoters_editted.fa"
+
+	
+    with open("input_for_d2v.txt", "w") as fout:
+        with open(enhancer_filename, "rt") as enh_fin, open(promoter_filename, "rt") as prm_fin:
+            for fin in [enh_fin, prm_fin]:
+                for record in SeqIO.parse(fin, "fasta"):
+                    paragraph_tag = record.id.split("~")[0]
+                    region_seq = str(record.seq)
+                    if args.way_of_kmer == "normal": #固定長k-mer
+                        fout.write(paragraph_tag + "\t" + region_seq + "\n")
+                    elif args.way_of_kmer == "random": #ランダム長k-mer
+                        for _ in range(10): # 100 がギリ
+                            fout.write(paragraph_tag + "\t" + region_seq + "\n")
+
+
+class CorporaIterator():
+	def __init__(self, args, fileobject):
+		self.args = args
+		self.fileobject = fileobject
+
+	def __iter__(self):
+		return self
+
+	def __next__(self):
+		tag_and_sequence = next(self.fileobject)
+		if tag_and_sequence is None:
+			raise StopIteration
+		else:
+			paragraph_tag, sequence = tag_and_sequence.split()
+			if self.args.way_of_kmer == "normal":
+				return TaggedDocument(utils.make_random_kmer_list(self.args.k, self.args.stride, sequence), [paragraph_tag])
+			elif self.args.way_of_kmer == "random":
+				return TaggedDocument(utils.make_random_kmer_list(self.args.kmin, self.args.kmax, sequence), [paragraph_tag])
+
+
+def make_paragraph_vector_from_enhancer_and_promoter_using_iterator(args, cell_line): # イテレータを使ってメモリの節約を試みる
+	make_input_txt_for_doc2vec(args, cell_line) # 前処理
+
+	print(f"{cell_line} のエンハンサーとプロモーターの両方を1つのdoc2vecで学習します")
+	print("doc2vec のための前処理 開始")
+	# _____________________________________
+	print(f"doc2vec training...")
+	corpus_iter = CorporaIterator(args, "input_for_d2v.txt")
+	model = Doc2Vec(documents=corpus_iter, min_count=1, window=10, vector_size=args.embedding_vector_dimention, sample=1e-4, negative=5, workers=8, epochs=10)
+	# model.build_vocab(corpus) # 単語の登録
+	# model.train( # ここで学習開始
+	# 	corpus,
+	# 	total_examples=model.corpus_count,
+	# 	epochs=model.epochs
+	# )
+	print("doc2vec 終了")
+	d2v_model_path = os.path.join(args.my_data_folder_path, "d2v", f"{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
+	model.save(d2v_model_path)
+
+
 def make_paragraph_vector_from_enhancer_and_promoter(args, cell_line):
 	print(f"{cell_line} のエンハンサーとプロモーターの両方を1つのdoc2vecで学習します")
 	print("doc2vec のための前処理 開始")

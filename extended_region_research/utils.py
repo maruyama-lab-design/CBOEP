@@ -24,14 +24,27 @@ def make_kmer_list(k, stride, sequence):
 
 
 def make_random_kmer_list(k_min, k_max, sequence):
-    '''
-    Split sequence to random length k-mer that has k_min ≦ k-mer ≦ k_max
-    '''
-    sentence = []
+	'''
+	Split sequence to random length k-mer that has k_min ≦ k-mer ≦ k_max
+	'''
+	if len(sequence) < k_min: # 例外
+		print(sequence)
+		return [sequence]
 
-    while len(sequence) >= k_min:
-        now_k = randint(k_min, k_max)
-       	sentence.append(sequence[:now_k])
-        sequence = sequence[now_k:]
-		
-    return sentence
+	sentence = []
+	start_i = 0
+	while start_i < len(sequence):
+		if len(sequence) - 2 * k_min < start_i:
+			sentence.append(sequence[start_i:])
+			break
+		now_k = randint(k_min, min(k_max, len(sequence) - start_i - k_min)) # 配列外参照しないように
+		sentence.append(sequence[start_i : start_i + now_k])
+		start_i += now_k	
+	return sentence
+
+
+# test
+# seq = "acgtacgtacgttagaccgattagatgacagattctgctacag"
+# for _ in range(10):
+# 	print(make_random_kmer_list(1, 3, seq))
+

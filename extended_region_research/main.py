@@ -54,7 +54,7 @@ def my_project(args, cell_line):
 	# doc2vec
 	args.stage1_start_time = datetime.datetime.now()
 	if args.share_doc2vec:
-		my_doc2vec.make_paragraph_vector_from_enhancer_and_promoter(args, cell_line)
+		my_doc2vec.make_paragraph_vector_from_enhancer_and_promoter_using_iterator(args, cell_line)
 	else: # 現在修正中のため使えない
 		# my_doc2vec.make_paragraph_vector_from_enhancer_only(args, cell_line)
 		# my_doc2vec.make_paragraph_vector_from_promoter_only(args, cell_line)
@@ -71,7 +71,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="エンハンサー, プロモーターの両端を延長したものに対し, doc2vecを行い,EPIs予測モデルの学習, 評価をする.")
 	parser.add_argument("--targetfinder_data_root_url", help="enhancer,promoterデータをダウンロードする際のtargetfinderのルートurl", default="https://github.com/shwhalen/targetfinder/raw/master/paper/targetfinder/")
 	parser.add_argument("--reference_genome_url", help="reference genome (hg19)をダウンロードする際のurl", default="https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/latest/hg19.fa.gz")
-	parser.add_argument("-my_data_folder_path", help="自分のデータフォルダパス", default="/Users/ylwrvr/卒論/Koga_code/MyProject/data")
+	parser.add_argument("-my_data_folder_path", help="自分のデータフォルダパス", default="/Users/ylwrvr/卒論/Koga_code/data")
 	parser.add_argument("--make_directory", action="store_true", help="実験に必要なディレクトリ構成を作る")
 	parser.add_argument("--download_reference_genome", action="store_true", help="リファレンスゲノムを外部からダウンロードするか")
 	parser.add_argument("--share_doc2vec", action="store_true", help="エンハンサーとプロモーターを一つのdoc2vecに共存させるか")

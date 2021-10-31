@@ -1,6 +1,7 @@
 .vscode/*
 data
 test
+memo*
 *.json
 *.pyc
 *.txt
