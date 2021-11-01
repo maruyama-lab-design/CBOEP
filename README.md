@@ -1,10 +1,11 @@
 # Koga_code
 
-### TargetFinderにあるエンハンサー・プロモーターの領域を延長し，各配列をdoc2vecによる分散表現によって相互作用を予測するモデル ###
+### TargetFinderにあるエンハンサー・プロモーターの領域を延長し，各配列をdoc2vecによる分散表現によって相互作用を予測するモデル
 
 extended_region_researchディレクトリ内のmain.pyを実行してください．
 
-### ライブラリ ###
+### 必要なライブラリ
+---
 
 | ライブラリ | バージョン |
 | :---: | :---: |
@@ -21,7 +22,8 @@ extended_region_researchディレクトリ内のmain.pyを実行してくださ�
 | `````` | TD |
 
 
-### ディレクトリ構造 ###
+### ディレクトリ構造
+---
 
 ```
 data_root_path (引数でパスを指定してください．子のフォルダが自動で生成されます．)  
@@ -51,7 +53,8 @@ extended_reginon_research
 └── utils.py  
 ```
 
-### 引数 （課題：説明雑な部分を直す）###
+### 引数 （課題：説明雑な部分を直す)
+---
 
 | 引数 | デフォルト | 説明 |
 | :---: | :---: | ---- |
@@ -71,5 +74,6 @@ extended_reginon_research
 | ```--k_min``` | ```3``` | ```--way_of_kmer == random``` の時のk_min |
 | ```--k_max``` | ```6``` | ```--way_of_kmer == random``` の時のk_max |
 
-### 実行例 ###  
+### 実行例
+---
 ```main.py -my_data_folder_path /Users/ylwrvr/卒論/Koga_code/data --cell_line_list GM12878 --make_directory --download_reference_genome --share_doc2vec ```
