@@ -22,17 +22,24 @@ from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 
+import data_download
+
 
 def make_extended_bedfile(args, cell_line):
 	# エンハンサー，プロモーターの延長後の領域を記録したbedファイルを作成
 	# paragraph tag もこのbedファイルに付与しておく
+
+	data_download.download_chrome_sizes(args)
+	chrom_sizes_df = pd.read_csv(os.path.join(args.my_data_folder_path, "reference_genome", "hg19_chrom_sizes.csv"))
+
 	for region_type in ["enhancer", "promoter"]:
 		origin_bed_df = pd.read_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv") # original data
 		extended_bed_path = f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed"
 
 		print(f"{region_type} make extended bed")
 		with open(extended_bed_path, "w") as fout:
-			for index, row_data in tqdm.tqdm(origin_bed_df.iterrows()):
+			# for index, row_data in tqdm.tqdm(origin_bed_df.iterrows()):
+			for index, row_data in origin_bed_df.iterrows():
 				start, end = -1, -1 # 初期化
 				chrom = row_data["chrom"]
 				name = row_data["name_origin"]
@@ -43,6 +50,10 @@ def make_extended_bedfile(args, cell_line):
 				elif region_type == "promoter":
 					start = row_data["start_origin"] - args.P_extended_left_length
 					end = row_data["end_origin"] + args.P_extended_right_length
+
+				chrom_max_size = chrom_sizes_df[chrom_sizes_df["chrom"] == chrom]["size"].to_list()[0]
+				if chrom_max_size < end:
+					continue
 
 				paragraph_tag = region_type + "_" + str(index) # enhancer_0 など
 				fout.write(f"{chrom}\t{start}\t{end}\t{paragraph_tag}~{name}\n")

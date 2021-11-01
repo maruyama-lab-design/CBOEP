@@ -21,8 +21,8 @@ def download_enhancer_and_promoter(args, cell_line):
 	for region_type in ["enhancer", "promoter"]:
 		print(f"{region_type}　downloading...")
 		url = os.path.join(args.targetfinder_data_root_url, cell_line, "output-ep", f"{region_type}s.bed")
-		bed_df = pd.read_csv(url,sep="\t")
-		bed_df.columns = ["chrom", "start_origin", "end_origin", "name_origin"]
+		bed_df = pd.read_csv(url,sep="\t",names=["chrom", "start_origin", "end_origin", "name_origin"])
+		# bed_df.columns = ["chrom", "start_origin", "end_origin", "name_origin"]
 		bed_path = os.path.join(args.my_data_folder_path, "bed", region_type, f"{cell_line}_{region_type}s.bed.csv")
 		bed_df.to_csv(bed_path, index=False)
 
@@ -30,9 +30,17 @@ def download_enhancer_and_promoter(args, cell_line):
 def download_reference_genome(args):
 	# reference genome
 	print("reference genome downloading...")
-	url = f"{args.reference_genome_url}"
+	url = os.path.join(f"{args.genome_browser_url}", "hg19.fa.gz")
 	output = os.path.join(args.my_data_folder_path, "reference_genome", "hg19.fa.gz")
 	urllib.request.urlretrieve(url, output)
+
+def download_chrome_sizes(args):
+	print("chrome_sizes downloading...")
+	url = os.path.join(f"{args.genome_browser_url}", "hg19.chrom.sizes")
+	df = pd.read_csv(url, sep="\t", names=["chrom", "size"])
+	# df.columns = ["chrom", "size"]
+	output = os.path.join(args.my_data_folder_path, "reference_genome", "hg19_chrom_sizes.csv")
+	df.to_csv(output, index=False)
 
 def download_training_data(args, cell_line):
 	print("training data downloading...")

@@ -22,16 +22,17 @@ import data_download
 
 def make_training_df(args, cell_line):
 	# 分類器学習の際の前処理
+	# bed.csv から 各paragraph tag をそのindex値より取得し，train.csvに新しいcolumnとして書き込む
 	
 	print("トレーニングデータをcsvファイルにて書き込み開始")
 	
 	# トレーニングデータをtargetfinderからダウンロード & 読み込み
 	data_download.download_training_data(args, cell_line)
 	train_path = os.path.join(args.my_data_folder_path, "train", f"{cell_line}_train.csv")
-	train_df = pd.read_csv(train_path, usecols=["enhancer_name", "promoter_name", "label"])
+	train_df = pd.read_csv(train_path, usecols=["enhancer_name", "promoter_name", "label"]) # original
 
-	train_df["enhancer_tag"] = -1 # カラムの追加
-	train_df["promoter_tag"] = -1 # カラムの追加
+	train_df.loc[:, "enhancer_tag"] = -1 # カラムの追加
+	train_df.loc[:, "promoter_tag"] = -1 # カラムの追加
 
 	for region_type in ["enhancer", "promoter"]:
 
@@ -39,16 +40,20 @@ def make_training_df(args, cell_line):
 		region_bed_df = pd.read_csv(region_bed_path, usecols=["name_origin"])
 
 		for region_index, row_data in region_bed_df.iterrows():
+			region_name = row_data["name_origin"]
 			if region_type == "enhancer":
-				train_index_list = train_df[train_df["enhancer_name"] == row_data["name_origin"]].index.tolist()
+				train_index_list = train_df.query("enhancer_name == @region_name").index.tolist()
 				if len(train_index_list) == 0:
 					continue
-				train_df["enhancer_tag"][train_index_list] = "enhancer_" + str(region_index)
+				train_df.loc[train_index_list, "enhancer_tag"] = "enhancer_" + str(region_index)
 			elif region_type == "promoter":
-				train_index_list = train_df[train_df["promoter_name"] == row_data["name_origin"]].index.tolist()
+				train_index_list = train_df.query("promoter_name == @region_name").index.tolist()
 				if len(train_index_list) == 0:
 					continue
-				train_df["promoter_tag"][train_index_list] = "promoter_" + str(region_index)
+				train_df.loc[train_index_list, "promoter_tag"] = "promoter_" + str(region_index)
+
+		drop_index_list = train_df.query("enhancer_tag == -1 or promoter_tag == -1").index.tolist()
+		train_df = train_df.drop(drop_index_list, axis=0)
 
 	train_df.to_csv(train_path)
 	print("トレーニングデータをcsvファイルにて書き込み終了")
@@ -172,10 +177,15 @@ def make_training_txt_unused2(args, cell_line):
 
 
 def train(args, cell_line):
-	make_training_df(args, cell_line)
+	make_training_df(args, cell_line) # train_csvをダウンロード&修正
 
-	X = np.empty((0, args.embedding_vector_dimention * 2))
-	Y = np.empty(0)
+	train_path = os.path.join(args.my_data_folder_path, "train", f"{cell_line}_train.csv")
+	train_df = pd.read_csv(train_path, usecols=["enhancer_tag", "promoter_tag", "label"]) # train_csvを読み込み
+
+	print(f"ペア数: {len(train_df)}")
+
+	X = np.zeros((len(train_df), args.embedding_vector_dimention * 2))
+	Y = np.zeros(0)
 
 	if args.share_doc2vec: #エンハンサーとプロモーター共存
 		# paragraph vector モデルのロード
@@ -195,16 +205,13 @@ def train(args, cell_line):
 				print(f"{pair_index}番目のペア スキップ")
 				continue
 
-			# if (enhancer_tag not in paragraph_tag_list) or (promoter_tag not in paragraph_tag_list):
-			# 	continue
-
 			enhancer_vec = d2v_model.dv[enhancer_tag] # エンハンサーのembedding vector
 			promoter_vec = d2v_model.dv[promoter_tag] # プロモーターのembedding vector
 			enhancer_vec = enhancer_vec.reshape((1,args.embedding_vector_dimention))
 			promoter_vec = promoter_vec.reshape((1,args.embedding_vector_dimention))
-			concat_vec = np.column_stack((enhancer_vec,promoter_vec))
-			X = np.append(X, concat_vec, axis=0)
-			Y = np.append(Y, label) # 正例か負例か
+			concat_vec = np.column_stack((enhancer_vec,promoter_vec)) # concat
+			X[pair_index] = concat_vec
+			Y[pair_index] = label # 正例か負例か
 	else: # エンハンサーとプロモーター別々 # 消してもいいかな？
 		# paragraph vector モデルのロード
 		enhancer_model = Doc2Vec.load(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")

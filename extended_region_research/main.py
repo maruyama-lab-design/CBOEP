@@ -19,7 +19,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 
 # 自作関数
-from make_dirictory import make_directory
+from make_directory import make_directory
 import data_download
 from data_processing import create_region_sequence_and_table
 import my_doc2vec
@@ -70,16 +70,16 @@ def my_project(args, cell_line):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="エンハンサー, プロモーターの両端を延長したものに対し, doc2vecを行い,EPIs予測モデルの学習, 評価をする.")
 	parser.add_argument("--targetfinder_data_root_url", help="enhancer,promoterデータをダウンロードする際のtargetfinderのルートurl", default="https://github.com/shwhalen/targetfinder/raw/master/paper/targetfinder/")
-	parser.add_argument("--reference_genome_url", help="reference genome (hg19)をダウンロードする際のurl", default="https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/latest/hg19.fa.gz")
+	parser.add_argument("--genome_browser_url", help="reference genome (hg19)をダウンロードする際のurl", default="https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/latest")
 	parser.add_argument("-my_data_folder_path", help="自分のデータフォルダパス", default="/Users/ylwrvr/卒論/Koga_code/data")
 	parser.add_argument("--make_directory", action="store_true", help="実験に必要なディレクトリ構成を作る")
 	parser.add_argument("--download_reference_genome", action="store_true", help="リファレンスゲノムを外部からダウンロードするか")
 	parser.add_argument("--share_doc2vec", action="store_true", help="エンハンサーとプロモーターを一つのdoc2vecに共存させるか")
 	parser.add_argument("--cell_line_list", nargs="+", help="細胞株の名前 (複数選択可能)", default=["K562"])
-	parser.add_argument("-el", "--E_extended_left_length", type=int, default=10, help="エンハンサーの上流をどれだけ伸ばすか")
-	parser.add_argument("-er", "--E_extended_right_length", type=int, default=20, help="エンハンサーの下流をどれだけ伸ばすか")
-	parser.add_argument("-pl", "--P_extended_left_length", type=int, default=30, help="プロモーターの上流をどれだけ伸ばすか")
-	parser.add_argument("-pr", "--P_extended_right_length", type=int, default=40, help="プロモーターの下流をどれだけ伸ばすか")
+	parser.add_argument("-el", "--E_extended_left_length", type=int, default=0, help="エンハンサーの上流をどれだけ伸ばすか")
+	parser.add_argument("-er", "--E_extended_right_length", type=int, default=0, help="エンハンサーの下流をどれだけ伸ばすか")
+	parser.add_argument("-pl", "--P_extended_left_length", type=int, default=0, help="プロモーターの上流をどれだけ伸ばすか")
+	parser.add_argument("-pr", "--P_extended_right_length", type=int, default=10000, help="プロモーターの下流をどれだけ伸ばすか")
 	parser.add_argument("--embedding_vector_dimention", type=int, default=100, help="paragraph vector の次元")
 	parser.add_argument('--way_of_kmer', type=str, choices=['normal', 'random'], default="normal", help='k-merの切り方 固定長かランダム長か')
 	parser.add_argument("--k", type=int, default=6, help="固定長のk-merの場合のk")
