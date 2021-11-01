@@ -31,8 +31,8 @@ def make_training_df(args, cell_line):
 	train_path = os.path.join(args.my_data_folder_path, "train", f"{cell_line}_train.csv")
 	train_df = pd.read_csv(train_path, usecols=["enhancer_name", "promoter_name", "label"]) # original
 
-	train_df["enhancer_tag"] = -1 # カラムの追加
-	train_df["promoter_tag"] = -1 # カラムの追加
+	train_df["enhancer_tag"] = 'nan' # カラムの追加
+	train_df["promoter_tag"] = 'nan' # カラムの追加
 
 	for region_type in ["enhancer", "promoter"]:
 
@@ -42,18 +42,19 @@ def make_training_df(args, cell_line):
 		for region_index, row_data in region_bed_df.iterrows():
 			region_name = row_data["name_origin"]
 			if region_type == "enhancer":
-				train_index_list = train_df.query("enhancer_name == @region_name").index.tolist()
+				train_index_list = train_df.query('enhancer_name == @region_name').index.tolist()
 				if len(train_index_list) == 0:
 					continue
 				train_df.loc[train_index_list, "enhancer_tag"] = "enhancer_" + str(region_index)
 			elif region_type == "promoter":
-				train_index_list = train_df.query("promoter_name == @region_name").index.tolist()
+				train_index_list = train_df.query('promoter_name == @region_name').index.tolist()
 				if len(train_index_list) == 0:
 					continue
 				train_df.loc[train_index_list, "promoter_tag"] = "promoter_" + str(region_index)
 
-		drop_index_list = train_df.query("enhancer_tag == -1 or promoter_tag == -1").index.tolist()
-		train_df = train_df.drop(drop_index_list, axis=0)
+	
+	drop_index_list = train_df.query('enhancer_tag == "nan" or promoter_tag == "nan"').index.tolist()
+	train_df = train_df.drop(drop_index_list, axis=0)
 
 	train_df.to_csv(train_path)
 	print("トレーニングデータをcsvファイルにて書き込み終了")
@@ -184,7 +185,7 @@ def train(args, cell_line):
 	print(f"ペア数: {len(train_df)}")
 
 	X = np.zeros((len(train_df), args.embedding_vector_dimention * 2))
-	Y = np.zeros(0)
+	Y = np.zeros(len(train_df))
 
 	if args.share_doc2vec: #エンハンサーとプロモーター共存
 		# paragraph vector モデルのロード
