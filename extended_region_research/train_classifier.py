@@ -56,7 +56,9 @@ def make_training_df(args, cell_line):
 	drop_index_list = train_df.query('enhancer_tag == "nan" or promoter_tag == "nan"').index.tolist()
 	train_df = train_df.drop(drop_index_list, axis=0)
 
-	train_df.to_csv(train_path)
+
+
+	train_df.to_csv(train_path, index=False)
 	print("トレーニングデータをcsvファイルにて書き込み終了")
 
 			
@@ -191,19 +193,25 @@ def train(args, cell_line):
 		# paragraph vector モデルのロード
 		d2v_model_path = os.path.join(args.my_data_folder_path, "d2v", f"{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
 		d2v_model = Doc2Vec.load(d2v_model_path)
-		
-		train_path = os.path.join(args.my_data_folder_path, "train", f"{cell_line}_train.csv")
-		train_df = pd.read_csv(train_path, usecols=["enhancer_tag", "promoter_tag", "label"])
+
+		paragraph_tag_list = list(d2v_model.dv.doctags)
+
+		# doc2vecに渡してないtrain data を削除
+		drop_index_list = []
+		for pair_index, row_data in train_df.iterrows():
+			enhancer_tag = str(row_data["enhancer_tag"]) # "ENHANCER_0" などのembedding vector タグ
+			promoter_tag = str(row_data["promoter_tag"]) # "PROMOTER_0" などのembedding vector タグ
+
+			if (enhancer_tag not in paragraph_tag_list) or (promoter_tag not in paragraph_tag_list):
+				drop_index_list.append(pair_index)
+				
+		train_df = train_df.drop(drop_index_list, axis=0)
 		
 		for pair_index, row_data in train_df.iterrows():
 
 			enhancer_tag = str(row_data["enhancer_tag"]) # "ENHANCER_0" などのembedding vector タグ
 			promoter_tag = str(row_data["promoter_tag"]) # "PROMOTER_0" などのembedding vector タグ
 			label = int(row_data["label"])
-
-			if enhancer_tag == "-1" or promoter_tag == "-1":
-				print(f"{pair_index}番目のペア スキップ")
-				continue
 
 			enhancer_vec = d2v_model.dv[enhancer_tag] # エンハンサーのembedding vector
 			promoter_vec = d2v_model.dv[promoter_tag] # プロモーターのembedding vector
