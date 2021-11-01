@@ -31,8 +31,8 @@ def make_training_df(args, cell_line):
 	train_path = os.path.join(args.my_data_folder_path, "train", f"{cell_line}_train.csv")
 	train_df = pd.read_csv(train_path, usecols=["enhancer_name", "promoter_name", "label"]) # original
 
-	train_df.loc[:, "enhancer_tag"] = -1 # カラムの追加
-	train_df.loc[:, "promoter_tag"] = -1 # カラムの追加
+	train_df["enhancer_tag"] = -1 # カラムの追加
+	train_df["promoter_tag"] = -1 # カラムの追加
 
 	for region_type in ["enhancer", "promoter"]:
 
@@ -57,9 +57,8 @@ def make_training_df(args, cell_line):
 
 	train_df.to_csv(train_path)
 	print("トレーニングデータをcsvファイルにて書き込み終了")
+
 			
-
-
 def make_training_txt_unused(args, cell_line):
 	# 分類器学習の際の前処理
 	# textfileにてペア情報を書き込む
