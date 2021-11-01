@@ -1,4 +1,4 @@
-# Koga_code
+# (model_name)
 
 ### TargetFinderにあるエンハンサー・プロモーターの領域を延長し，各配列をdoc2vecによる分散表現によって相互作用を予測するモデル
 
