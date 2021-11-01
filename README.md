@@ -6,13 +6,48 @@ extended_region_researchディレクトリ内のmain.pyを実行してくださ�
 
 ### ライブラリ ###
 
-[ライブラリ名] [バージョン]  
-:  
-:  
+| ライブラリ | バージョン |
+| :---: | :---: |
+| ```pandas``` | TD |
+| ```numpy``` | TD |
+| ```biopython``` | TD |
+| ```gensim``` | TD |
+| ```pybedtools``` | TD |
+| ```sklearn``` | TD |
+| `````` | TD |
+| `````` | TD |
+| `````` | TD |
+| `````` | TD |
+| `````` | TD |
+
 
 ### ディレクトリ構造 ###
 
-追記予定...  
+data_root_path (引数でパスを指定してください．子のフォルダが自動で生成されます．)
+├── bed
+│   ├── enhancer
+│   └── promoter
+├── fasta
+│   ├── enhancer
+│   └── promoter
+├── reference_genome
+├── d2v
+├── train
+├── result
+└── log
+
+
+
+extended_reginon_research  
+├── main.py  
+├── make_directory.py
+├── data_download.py  
+├── data_processing.py
+├── my_doc2vec.py
+├── train_classifier.py
+├── t_sne.py
+├── make_args_logfile.py
+└── utils.py
 
 ### 引数 ###
 
