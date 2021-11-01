@@ -54,20 +54,20 @@ extended_reginon_research
 ### 引数 （課題：説明雑な部分を直す）###
 
 | 引数 | デフォルト | 説明 |
-| :---: | :---: | :---:|
+| :---: | :---: | ---- |
 | ```-my_data_folder_path``` | 無し | 必要なデータがこのフォルダーをルートパスとして生成されます．必ず指定してください |
 | ```--make_directory``` | 無し | 必要なディレクトリを```-my_data_folder_path```中に生成します |
 | ```--download_reference_genome``` | 無し | hg19のリファレンスゲノムをgenome browserからダウンロードします． |
 | ```--cell_line_list``` | ```K562``` | 実験に用いる細胞株 |
-| ```--E_extended_left_length``` | 10 | エンハンサーの上流の延長する長さ |
-| ```--E_extended_right_length``` | 20 | エンハンサーの上流の延長する長さ |
-| ```--P_extended_left_length``` | 30 | エンハンサーの上流の延長する長さ |
-| ```--P_extended_right_length``` | 40 | エンハンサーの上流の延長する長さ |
+| ```--E_extended_left_length``` | ```10``` | エンハンサーの上流の延長する長さ |
+| ```--E_extended_right_length``` | ```20``` | エンハンサーの上流の延長する長さ |
+| ```--P_extended_left_length``` | ```30``` | エンハンサーの上流の延長する長さ |
+| ```--P_extended_right_length``` | ```40``` | エンハンサーの上流の延長する長さ |
 | ```--embedding_vector_dimention``` | TD | doc2vecによるparagraph vectorの次元数 |
 | ```--way_of_kmer``` | ```normal``` | k-merの切り方(```normal``` or ```random```)|
 | ```--k``` | 6 | ```--way_of_kmer == normal``` の時のk |
 | ```--stride``` | 1 | ```--way_of_kmer == normal``` の時のstride |
-| ```--sentence_cnt``` |  | TD |
+| ```--sentence_cnt``` | ? | TD |
 | ```--k_min``` | 3 | ```--way_of_kmer == random``` の時のk_min |
 | ```--k_max``` | 6 | ```--way_of_kmer == random``` の時のk_max |
 
