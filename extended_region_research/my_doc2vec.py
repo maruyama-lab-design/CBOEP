@@ -20,21 +20,25 @@ from sklearn.ensemble import GradientBoostingClassifier
 import utils
 
 def make_input_txt_for_doc2vec(args, cell_line):
-    enhancer_filename = f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_enhancers_editted.fa"
-    promoter_filename = f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_promoters_editted.fa"
+	print("入力sequenceをファイルに書き出します．")
+
+	enhancer_filename = f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_enhancers_editted.fa"
+	promoter_filename = f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_promoters_editted.fa"
 
 	
-    with open("input_for_d2v.txt", "w") as fout:
-        with open(enhancer_filename, "rt") as enh_fin, open(promoter_filename, "rt") as prm_fin:
-            for fin in [enh_fin, prm_fin]:
-                for record in SeqIO.parse(fin, "fasta"):
-                    paragraph_tag = record.id.split("~")[0]
-                    region_seq = str(record.seq)
-                    if args.way_of_kmer == "normal": #固定長k-mer
-                        fout.write(paragraph_tag + "\t" + region_seq + "\n")
-                    elif args.way_of_kmer == "random": #ランダム長k-mer
-                        for _ in range(10): # 100 がギリ
-                            fout.write(paragraph_tag + "\t" + region_seq + "\n")
+	with open("input_for_d2v.txt", "w") as fout:
+		with open(enhancer_filename, "rt") as enh_fin, open(promoter_filename, "rt") as prm_fin:
+			for fin in [enh_fin, prm_fin]:
+				for record in SeqIO.parse(fin, "fasta"):
+					paragraph_tag = record.id.split("~")[0]
+					region_seq = str(record.seq)
+					if args.way_of_kmer == "normal": #固定長k-mer
+						region_seq_kmer_list = utils.make_kmer_list(args.k, args.stride, region_seq)
+						fout.write(paragraph_tag + "\t" + "\t".join(region_seq_kmer_list) + "\n")
+					elif args.way_of_kmer == "random": #ランダム長k-mer
+						for _ in range(args.sentence_cnt): # 100 がギリ
+							region_seq_kmer_list = utils.make_random_kmer_list(args.k_min, args.k_max, region_seq)
+							fout.write(paragraph_tag + "\t" + "\t".join(region_seq_kmer_list) + "\n")
 
 
 class CorporaIterator():
@@ -46,15 +50,12 @@ class CorporaIterator():
 		return self
 
 	def __next__(self):
-		tag_and_sequence = next(self.fileobject)
-		if tag_and_sequence is None:
+		tag_and_sequence_list = next(self.fileobject)
+		if tag_and_sequence_list is None:
 			raise StopIteration
 		else:
-			paragraph_tag, sequence = tag_and_sequence.split()
-			if self.args.way_of_kmer == "normal":
-				return TaggedDocument(utils.make_kmer_list(self.args.k, self.args.stride, sequence), [paragraph_tag])
-			elif self.args.way_of_kmer == "random":
-				return TaggedDocument(utils.make_random_kmer_list(self.args.k_min, self.args.k_max, sequence), [paragraph_tag])
+			paragraph_tag, sequence = tag_and_sequence_list.split()[0], tag_and_sequence_list.split()[1:]
+			return TaggedDocument(sequence, [paragraph_tag])
 
 
 def make_paragraph_vector_from_enhancer_and_promoter_using_iterator(args, cell_line): # イテレータを使ってメモリの節約を試みる
@@ -66,9 +67,23 @@ def make_paragraph_vector_from_enhancer_and_promoter_using_iterator(args, cell_l
 	print(f"doc2vec training...")
 	with open("input_for_d2v.txt") as fileobject:
 		corpus_iter = CorporaIterator(args, fileobject)
-		model = Doc2Vec(documents=corpus_iter, min_count=1, window=10, vector_size=args.embedding_vector_dimention, sample=1e-4, negative=5, workers=8, epochs=10)
+		model = Doc2Vec(
+			min_count=1,
+			window=10,
+			vector_size=args.embedding_vector_dimention,
+			sample=1e-4,
+			negative=5,
+			workers=8,
+			epochs=10
+		)
+		model.build_vocab(corpus_iter)
+		model.train(
+			corpus_iter,
+			total_examples=model.corpus_count,
+			epochs=model.epochs
+		)
 	print("doc2vec 終了")
-	d2v_model_path = os.path.join(args.my_data_folder_path, "d2v", f"{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
+	d2v_model_path = os.path.join(args.my_data_folder_path, "d2v", f"{args.output}.d2v")
 	model.save(d2v_model_path)
 
 

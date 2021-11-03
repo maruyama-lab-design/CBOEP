@@ -191,10 +191,10 @@ def train(args, cell_line):
 
 	if args.share_doc2vec: #エンハンサーとプロモーター共存
 		# paragraph vector モデルのロード
-		d2v_model_path = os.path.join(args.my_data_folder_path, "d2v", f"{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
+		d2v_model_path = os.path.join(args.my_data_folder_path, "d2v", f"{args.output}.d2v")
 		d2v_model = Doc2Vec.load(d2v_model_path)
 
-		paragraph_tag_list = list(d2v_model.dv.doctags)
+		paragraph_tag_list = list(d2v_model.dv.index_to_key)
 
 		# doc2vecに渡してないtrain data を削除
 		drop_index_list = []

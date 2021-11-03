@@ -123,7 +123,7 @@ def edit_fastafile(args, cell_line):
 		with open(input_fasta_path, "r") as fin, open(output_fasta_path, "w") as fout:
 			for record in SeqIO.parse(fin, "fasta"):
 				seq = str(record.seq).lower()
-				if str(record.seq).count("n") > 0: # 欠損配列を除外
+				if seq.count("n") > 0: # 欠損配列を除外
 					continue
 				complement_seq = str(record.seq.complement()).lower()
 
