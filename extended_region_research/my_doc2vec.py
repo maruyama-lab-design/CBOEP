@@ -40,8 +40,35 @@ def make_input_txt_for_doc2vec(args, cell_line):
 							region_seq_kmer_list = utils.make_random_kmer_list(args.k_min, args.k_max, region_seq)
 							fout.write(paragraph_tag + "\t" + "\t".join(region_seq_kmer_list) + "\n")
 
+def sentence_generator(filename):
+	with open(filename, "r") as fin:
+		for line in fin:
+			tag_and_sentence = line.split()
+			yield TaggedDocument(tag_and_sentence[1:], [tag_and_sentence[0]])
+
+class SentencesIterator():
+	# これは正しく動いてそう　epochごとにシャッフルはしてない？
+	# 参考 https://jacopofarina.eu/posts/gensim-generator-is-not-iterator/
+	def __init__(self, generator_function, filename):
+		self.generator_function = generator_function
+		self.filename = filename
+		self.generator = self.generator_function(self.filename)
+
+	def __iter__(self):
+		# reset the generator
+		self.generator = self.generator_function(self.filename)
+		return self
+
+	def __next__(self):
+		result = next(self.generator)
+		if result is None:
+			raise StopIteration
+		else:
+			return result
+
 
 class CorporaIterator():
+	# こっちを使うとおかしくなる...?
 	def __init__(self, args, fileobject):
 		self.args = args
 		self.fileobject = fileobject
@@ -65,23 +92,34 @@ def make_paragraph_vector_from_enhancer_and_promoter_using_iterator(args, cell_l
 	print("doc2vec のための前処理 開始")
 	# _____________________________________
 	print(f"doc2vec training...")
-	with open("input_for_d2v.txt") as fileobject:
-		corpus_iter = CorporaIterator(args, fileobject)
-		model = Doc2Vec(
-			min_count=1,
-			window=10,
-			vector_size=args.embedding_vector_dimention,
-			sample=1e-4,
-			negative=5,
-			workers=8,
-			epochs=10
-		)
-		model.build_vocab(corpus_iter)
-		model.train(
-			corpus_iter,
-			total_examples=model.corpus_count,
-			epochs=model.epochs
-		)
+	# with open("input_for_d2v.txt") as fileobject:
+	# 	corpus_iter = CorporaIterator(args, fileobject)
+	# 	model = Doc2Vec(
+	# 		min_count=1,
+	# 		window=10,
+	# 		vector_size=args.embedding_vector_dimention,
+	# 		sample=1e-4,
+	# 		negative=5,
+	# 		workers=8,
+	# 		epochs=10
+	# 	)
+	# 	model.build_vocab(corpus_iter)
+	# 	model.train(
+	# 		corpus_iter,
+	# 		total_examples=model.corpus_count,
+	# 		epochs=model.epochs
+	# 	)
+	sentence_iter = SentencesIterator(sentence_generator, "input_for_d2v.txt")
+	model = Doc2Vec(
+		sentence_iter,
+		min_count=1,
+		window=10,
+		vector_size=args.embedding_vector_dimention,
+		sample=1e-4,
+		negative=5,
+		workers=8,
+		epochs=10
+	)
 	print("doc2vec 終了")
 	d2v_model_path = os.path.join(args.my_data_folder_path, "d2v", f"{args.output}.d2v")
 	model.save(d2v_model_path)
