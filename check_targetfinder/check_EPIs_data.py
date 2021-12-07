@@ -5,10 +5,16 @@ import matplotlib.pyplot as plt
 
 targetfinder_output_url = "https://github.com/shwhalen/targetfinder/raw/master/paper/targetfinder"
 
-def download_pair_data(cell_line):
-    # data directory を この~.pyと同じ場所に作成
+def make_directory():
     data_path = os.path.join(os.path.dirname(__file__), "data")
+    fig_path = os.path.join(os.path.dirname(__file__), "figure")
     os.system(f"mkdir -p {data_path}")
+    os.system(f"mkdir -p {fig_path}")
+
+def download_pair_data(cell_line):
+    # # data directory を この~.pyと同じ場所に作成
+    # data_path = os.path.join(os.path.dirname(__file__), "data")
+    # os.system(f"mkdir -p {data_path}")
 
     # training data の url
     url = os.path.join(targetfinder_output_url, cell_line, "output-ep", "training.csv.gz")
@@ -53,14 +59,22 @@ def check_PosNeg_ratio_by_each_promoter(cell_line):
         negatives.append(neg)
     
     # 散布図を描画
+    figure = plt.figure()
     plt.scatter(positives, negatives, alpha=0.3)
-    plt.title("pos-neg cnt by each promoter")
+    plt.title(f"{cell_line} pos-neg cnt by each promoter")
     plt.xlabel("positive cnt")
     plt.ylabel("negative cnt")
-    plt.show()
+    # plt.show()
+    fig_path = os.path.join(os.path.dirname(__file__), "figure", f"{cell_line}_pairs_by_each_promoter.png")
+    figure.savefig(fig_path)
+
 
 
 
 if __name__ == "__main__":
-    # download_pair_data("K562")
-    check_PosNeg_ratio_by_each_promoter("K562")
+    make_directory()
+
+    cell_line_list = ["K562", "GM12878", "HUVEC", "HeLa-S3", "NHEK"]
+    for cell_line in cell_line_list:
+        download_pair_data(cell_line)
+        check_PosNeg_ratio_by_each_promoter(cell_line)
