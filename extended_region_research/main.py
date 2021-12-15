@@ -29,7 +29,8 @@ from make_args_logfile import make_args_logfile
 def my_project(args, cell_line):
 
 	print("実験開始")
-	args.output = f"{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)},kmer={args.way_of_kmer},N={args.sentence_cnt}"
+	# args.output = f"{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)},d={args.embedding_vector_dimention}kmer={args.way_of_kmer},N={args.sentence_cnt}"
+	args.output = f"{cell_line},d={args.embedding_vector_dimention},way_of_kmer={args.way_of_kmer},k={args.k},s={args.stride},N={args.sentence_cnt},kmin={args.k_min},kmax={args.k_max},way_of_cv={args.way_of_cv},clf={args.classifier},trees={args.gbrt_tree_cnt}"
 	print(f"output = {args.output}")
 
 	# 必要なディレクトリの作成
@@ -44,24 +45,20 @@ def my_project(args, cell_line):
 	# エンハンサープロモーターのダウンロード
 	data_download.download_enhancer_and_promoter(args, cell_line)
 
-	# if os.path.exists(args.output): # 存在してたらスキップ
-	# 	print(args.output + " スキップ")
-	# 	continue
+	if os.path.exists(args.output): # 存在してたらスキップ
+		print(args.output + " スキップ")
+		return 
 	
 	# bedの作成&fastaの作成&tableの作成
-	create_region_sequence_and_table(args, cell_line) ### どのようなプロセスかが分かる関数名がいいです．
+	create_region_sequence_and_table(args, cell_line)
 
-	# doc2vec
-	args.stage1_start_time = datetime.datetime.now()
-	if args.share_doc2vec:
+	# doc2vec (stage1)
+	if args.stage2_only == False:
+		args.stage1_start_time = datetime.datetime.now()
 		my_doc2vec.make_paragraph_vector_from_enhancer_and_promoter_using_iterator(args, cell_line)
-	else: # 現在修正中のため使えない
-		# my_doc2vec.make_paragraph_vector_from_enhancer_only(args, cell_line)
-		# my_doc2vec.make_paragraph_vector_from_promoter_only(args, cell_line)
-		foo = ""
-	args.stage1_end_time = datetime.datetime.now()
+		args.stage1_end_time = datetime.datetime.now()
 
-	# 分類期学習
+	# 分類期学習 (stage2)
 	args.stage2_start_time = datetime.datetime.now()
 	train_classifier.train(args, cell_line)
 	args.stage2_end_time = datetime.datetime.now()
@@ -79,19 +76,23 @@ if __name__ == '__main__':
 	parser.add_argument("-el", "--E_extended_left_length", type=int, default=0, help="エンハンサーの上流をどれだけ伸ばすか")
 	parser.add_argument("-er", "--E_extended_right_length", type=int, default=0, help="エンハンサーの下流をどれだけ伸ばすか")
 	parser.add_argument("-pl", "--P_extended_left_length", type=int, default=0, help="プロモーターの上流をどれだけ伸ばすか")
-	parser.add_argument("-pr", "--P_extended_right_length", type=int, default=10000, help="プロモーターの下流をどれだけ伸ばすか")
+	parser.add_argument("-pr", "--P_extended_right_length", type=int, default=0, help="プロモーターの下流をどれだけ伸ばすか")
 	parser.add_argument("--embedding_vector_dimention", type=int, default=100, help="paragraph vector の次元")
 	parser.add_argument('--way_of_kmer', type=str, choices=['normal', 'random'], default="normal", help='k-merの切り方 固定長かランダム長か')
 	parser.add_argument("--k", type=int, default=6, help="固定長のk-merの場合のk")
 	parser.add_argument("--stride", type=int, default=1, help="固定帳のk-merの場合のstride")
-	parser.add_argument("--sentence_cnt", type=int, default=10, help="ランダム長のk-merの場合,一本のseqから生成されるのsentence個数")
+	parser.add_argument("--sentence_cnt", type=int, default=5, help="ランダム長のk-merの場合,一本のseqから生成されるのsentence個数")
 	parser.add_argument("--k_min", type=int, default=3, help="ランダム長のk-merの場合のk_min")
 	parser.add_argument("--k_max", type=int, default=6, help="ランダム長のk-merの場合のk_max")
+	parser.add_argument("--classifier", type=str, choices=["GBRT"], default="GBRT", help="分類器に何を使うか")
+	parser.add_argument("--way_of_cv", type=str, choices=["random", "split"], default="split", help="ランダムcross-valか，染色体番号ごとか")
+	parser.add_argument("--gbrt_tree_cnt", type=int, default=4000, help="GBRTの木の数")
 	parser.add_argument("--stage1_start_time", type=str, help="doc2vec開始時間")
 	parser.add_argument("--stage1_end_time", type=str, help="doc2vec終了時間")
 	parser.add_argument("--stage2_start_time", type=str, help="分類期学習開始時間")
 	parser.add_argument("--stage2_end_time", type=str, help="分類期学習終了時間")
 	parser.add_argument("--output", type=str, help="output名")
+	parser.add_argument("--stage2_only", action="store_true", help="分類器学習のみ")
 	args = parser.parse_args()
 
 	if args.way_of_kmer == "normal":
@@ -102,13 +103,8 @@ if __name__ == '__main__':
 		args.k = -1
 		args.stride = -1
 
-
-	### Make the remaining part as a function like def func(args), and put it above. 
-	for cell_line in args.cell_line_list: # 細胞株ごとにループss
+	
+	for cell_line in args.cell_line_list:
 		my_project(args, cell_line)
-
-	### save the contents of args to a log file.
-	make_args_logfile(args)
-
-
+		make_args_logfile(args)
 

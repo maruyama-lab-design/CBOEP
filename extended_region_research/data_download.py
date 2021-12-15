@@ -45,5 +45,5 @@ def download_chrome_sizes(args):
 def download_training_data(args, cell_line):
 	print("training data downloading...")
 	url = f"https://raw.githubusercontent.com/wanwenzeng/ep2vec/master/{cell_line}train.csv"
-	df = pd.read_csv(url, usecols=["bin", "enhancer_name", "promoter_name", "label"])
+	df = pd.read_csv(url, usecols=["bin", "enhancer_chrom", "enhancer_name", "promoter_name", "label"])
 	df.to_csv(f"{args.my_data_folder_path}/train/{cell_line}_train.csv", index=False)

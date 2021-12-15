@@ -9,13 +9,16 @@ import os
 import argparse
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
+import random
 
 # classifier
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 
 from t_sne import t_SNE
+from utils import pickle_dump
 
 import data_download
 
@@ -29,7 +32,7 @@ def make_training_df(args, cell_line):
 	# トレーニングデータをtargetfinderからダウンロード & 読み込み
 	data_download.download_training_data(args, cell_line)
 	train_path = os.path.join(args.my_data_folder_path, "train", f"{cell_line}_train.csv")
-	train_df = pd.read_csv(train_path, usecols=["enhancer_name", "promoter_name", "label"]) # original
+	train_df = pd.read_csv(train_path, usecols=["enhancer_chrom", "enhancer_name", "promoter_name", "label"]) # original
 
 	train_df["enhancer_tag"] = 'nan' # カラムの追加
 	train_df["promoter_tag"] = 'nan' # カラムの追加
@@ -178,203 +181,137 @@ def make_training_txt_unused2(args, cell_line):
 	print(f"負例数: {negative_num}")
 
 
+def my_classifier(args): # 分類器を返す
+	if args.classifier == "GBRT":
+		return GradientBoostingClassifier(n_estimators = args.gbrt_tree_cnt, learning_rate = 0.001, max_depth = 25, max_features = 'log2', random_state = 0)
+
+
+def my_cross_validation(args, classifier, X_df, Y_df):
+
+	result_dicts = {}
+
+	if args.way_of_cv == "random": # random 10-fold cross-validation
+		print("random 10-fold cross-validation...")
+		cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=0)
+		x = X_df.iloc[:, 1:].values
+		y = Y_df.iloc[:, 0].values
+		for fold, (train_index, test_index) in enumerate(cv.split(x, y)):
+			print(f"fold {fold+1}...")
+			x_train, x_test = x[train_index], x[test_index]
+			y_train, y_test = y[train_index], y[test_index]
+
+			classifier.fit(x_train, y_train) # 学習
+			y_score = classifier.decision_function(x_test) # 閾値なし
+			y_pred = classifier.predict(x_test) # 閾値 0.5 predict
+
+			print(f"fold {fold+1}\nConfusion Matrix:")
+			print(confusion_matrix(y_test, y_pred))
+
+			print(f"fold {fold+1}\nClassification Report")
+			print(classification_report(y_test, y_pred))
+
+			result_dicts[f"fold{fold+1}"] = classification_report(y_test, y_pred, output_dict=True)
+
+	elif args.way_of_cv == "split": # chromosomal-split cross-validateion
+		print("chromosomal-split cross-validateion...")
+		chromosomes = ["chr"+str(i) for i in range(1, 23)]
+		chromosomes.append("chrX")
+		df = pd.concat([X_df, Y_df], axis=1)
+		df_groupby_chrom = df.groupby("chrom")
+
+		test_chroms = [["chr1", "chr2"], ["chr3", "chr4"], ["chr5", "chr6"], ["chr7", "chr8"], ["chr9", "chr10"], ["chr11", "chr12"], ["chr13", "chr14"], ["chr15", "chr16"], ["chr17", "chr18"], ["chr19", "chr20"], ["chr21", "chr22"]]
+		for fold, test_chrom in enumerate(test_chroms):
+			print(f"fold {fold+1}...")
+			print(f"test chromosome : {test_chrom}")
+			test_chrom1, test_chrom2 = test_chrom[0], test_chrom[1]
+			test_index = df.query('chrom == @test_chrom1 or chrom == @test_chrom2').index.tolist()
+			test_df = df.iloc[test_index, :]
+			train_df = df.drop(index=test_index)
+			x_train = train_df.iloc[:, 1:-1].values
+			y_train = train_df.iloc[:, -1].values
+			x_test = test_df.iloc[:, 1:-1].values
+			y_test = test_df.iloc[:, -1].values
+
+			classifier.fit(x_train, y_train) # 学習
+			y_pred = classifier.predict(x_test) # predict
+
+			print(f"fold {fold+1}\nConfusion Matrix:")
+			print(confusion_matrix(y_test, y_pred))
+
+			print(f"fold {fold+1}\nClassification Report")
+			print(classification_report(y_test, y_pred))
+
+			result_dicts[f"fold{fold+1}"] = classification_report(y_test, y_pred, output_dict=True)
+
+	return result_dicts
+
+
 def train(args, cell_line):
 	make_training_df(args, cell_line) # train_csvをダウンロード&修正
 
 	train_path = os.path.join(args.my_data_folder_path, "train", f"{cell_line}_train.csv")
-	train_df = pd.read_csv(train_path, usecols=["enhancer_tag", "promoter_tag", "label"]) # train_csvを読み込み
+	train_df = pd.read_csv(train_path, usecols=["enhancer_chrom", "enhancer_tag", "promoter_tag", "label"]) # train_csvを読み込み
+
+	# paragraph vector モデルのロード
+	d2v_model_path = os.path.join(args.my_data_folder_path, "d2v", f"{args.output}.d2v")
+	d2v_model = Doc2Vec.load(d2v_model_path)
+
+	paragraph_tag_list = list(d2v_model.dv.index_to_key)
+
+	# doc2vecに渡してないtrain data を削除
+	drop_index_list = []
+	for pair_index, row_data in train_df.iterrows():
+		enhancer_tag = str(row_data["enhancer_tag"]) # "ENHANCER_0" などのembedding vector タグ
+		promoter_tag = str(row_data["promoter_tag"]) # "PROMOTER_0" などのembedding vector タグ
+
+		if (enhancer_tag not in paragraph_tag_list) or (promoter_tag not in paragraph_tag_list):
+			drop_index_list.append(pair_index)
+			
+	train_df = train_df.drop(drop_index_list, axis=0)
+	train_df = train_df.reset_index()
 
 	print(f"ペア数: {len(train_df)}")
 
-	X = np.zeros((len(train_df), args.embedding_vector_dimention * 2))
-	Y = np.zeros(len(train_df))
-
-	if args.share_doc2vec: #エンハンサーとプロモーター共存
-		# paragraph vector モデルのロード
-		d2v_model_path = os.path.join(args.my_data_folder_path, "d2v", f"{args.output}.d2v")
-		d2v_model = Doc2Vec.load(d2v_model_path)
-
-		paragraph_tag_list = list(d2v_model.dv.index_to_key)
-
-		# doc2vecに渡してないtrain data を削除
-		drop_index_list = []
-		for pair_index, row_data in train_df.iterrows():
-			enhancer_tag = str(row_data["enhancer_tag"]) # "ENHANCER_0" などのembedding vector タグ
-			promoter_tag = str(row_data["promoter_tag"]) # "PROMOTER_0" などのembedding vector タグ
-
-			if (enhancer_tag not in paragraph_tag_list) or (promoter_tag not in paragraph_tag_list):
-				drop_index_list.append(pair_index)
-				
-		train_df = train_df.drop(drop_index_list, axis=0)
-		
-		for pair_index, row_data in train_df.iterrows():
-
-			enhancer_tag = str(row_data["enhancer_tag"]) # "ENHANCER_0" などのembedding vector タグ
-			promoter_tag = str(row_data["promoter_tag"]) # "PROMOTER_0" などのembedding vector タグ
-			label = int(row_data["label"])
-
-			enhancer_vec = d2v_model.dv[enhancer_tag] # エンハンサーのembedding vector
-			promoter_vec = d2v_model.dv[promoter_tag] # プロモーターのembedding vector
-			enhancer_vec = enhancer_vec.reshape((1,args.embedding_vector_dimention))
-			promoter_vec = promoter_vec.reshape((1,args.embedding_vector_dimention))
-			concat_vec = np.column_stack((enhancer_vec,promoter_vec)) # concat
-			X[pair_index] = concat_vec
-			Y[pair_index] = label # 正例か負例か
-	else: # エンハンサーとプロモーター別々 # 消してもいいかな？
-		# paragraph vector モデルのロード
-		enhancer_model = Doc2Vec.load(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
-		promoter_model = Doc2Vec.load(f"{args.my_data_folder_path}/d2v/{cell_line},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
-
-		enhancer_paragraph_tag_list = list(enhancer_model.dv.doctags)
-		promoter_paragraph_tag_list = list(promoter_model.dv.doctags)
-
-		# メモしておいたペア情報を使う
-		fin = open('training.txt','r')
-		for i, line in enumerate(fin):
-			data = line.strip().split()
-			enhancer_tag = data[0] # "ENHANCER_0" などのembedding vector タグ
-			promoter_tag = data[1] # "PROMOTER_0" などのembedding vector タグ
-			label = int(data[2])
-
-			# if (enhancer_tag not in enhancer_paragraph_tag_list) or (promoter_tag not in promoter_paragraph_tag_list):
-			# 	continue
-
-			enhancer_vec = enhancer_model.dv[enhancer_tag] # エンハンサーのembedding vector
-			promoter_vec = promoter_model.dv[promoter_tag] # プロモーターのembedding vector
-			enhancer_vec = enhancer_vec.reshape((1,args.embedding_vector_dimention))
-			promoter_vec = promoter_vec.reshape((1,args.embedding_vector_dimention))
-			concat_vec = np.column_stack((enhancer_vec,promoter_vec))
-			X = np.append(X, concat_vec, axis=0)
-			Y = np.append(Y, label) # 正例か負例か
-
+	X = np.zeros((len(train_df), args.embedding_vector_dimention * 2)) # 2d次元の埋め込みベクトルを入れるzero配列
+	Y = np.zeros(len(train_df)) # labelを入れるzero配列
+	chroms = np.empty(len(train_df), dtype=object) # 染色体番号を入れる空配列
 	
+	for pair_index, row_data in train_df.iterrows():
+
+		enhancer_tag = str(row_data["enhancer_tag"]) # "ENHANCER_0" などのembedding vector タグ
+		promoter_tag = str(row_data["promoter_tag"]) # "PROMOTER_0" などのembedding vector タグ
+		label = int(row_data["label"])
+		chrom = row_data["enhancer_chrom"]
+
+		enhancer_vec = d2v_model.dv[enhancer_tag] # エンハンサーのembedding vector
+		promoter_vec = d2v_model.dv[promoter_tag] # プロモーターのembedding vector
+		enhancer_vec = enhancer_vec.reshape((1,args.embedding_vector_dimention))
+		promoter_vec = promoter_vec.reshape((1,args.embedding_vector_dimention))
+		concat_vec = np.column_stack((enhancer_vec,promoter_vec)) # concat
+		X[pair_index] = concat_vec
+		Y[pair_index] = label # 正例か負例か
+		chroms[pair_index] = chrom # 染色体番号
+
+	# t_sneにて図示
+	t_SNE(args, X, Y)
+
+	X_df = pd.DataFrame(X)
+	Y_df = pd.DataFrame({"Y" : Y})
+	chrom_df = pd.DataFrame({"chrom" : chroms})
+
+	X_df = pd.concat([chrom_df, X_df], axis=1)
 
 	# 分類器を用意 # TO DO optionで分けられるように
-	estimator = GradientBoostingClassifier(n_estimators = 4000, learning_rate = 0.001, max_depth = 25, max_features = 'log2', random_state = 0)
+	classifier = my_classifier(args)
 	# estimator = KNeighborsClassifier(n_neighbors=5) # k近傍法
 
-	# t_sneにて図示
-	t_SNE(args, X, Y)
-
-	# 評価する指標
-	score_funcs = ['f1', 'roc_auc', 'average_precision']
-	cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=0)
+	# cross validation training
 	print("training classifier...")
-	scores = cross_validate(estimator, X, Y, scoring = score_funcs, cv = cv, n_jobs = -1) # ここで学習開始
+	result_dicts = my_cross_validation(args, classifier, X_df, Y_df) # ここで学習開始
 
-	# 得られた指標を出力する & 結果の記録
-	print('F1:', scores['test_f1'].mean())
-	print('auROC:', scores['test_roc_auc'].mean())
-	print('auPRC:', scores['test_average_precision'].mean())
-	f1 = scores['test_f1']
-	f1 = np.append(f1, scores['test_f1'].mean())
-	auROC = scores['test_roc_auc']
-	auROC = np.append(auROC, scores['test_roc_auc'].mean())
-	auPRC =  scores['test_average_precision']
-	auPRC = np.append(auPRC, scores['test_average_precision'].mean())
-	result = pd.DataFrame(
-		{
-		"F1": f1,
-		"auROC": auROC,
-		"auPRC": auPRC,
-		},
-		index = ["1-fold", "2-fold", "3-fold", "4-fold", "5-fold", "6-fold", "7-fold", "8-fold", "9-fold", "10-fold", "mean"]	
-	)
+	# save result_dicts to ~.pickle
+	save_filename = os.path.join(args.my_data_folder_path, "result", f"{args.output}.pickle")
+	print(f"saving result to {save_filename}...")
+	pickle_dump(result_dicts, save_filename)
+	print("saved!!")
 
-	result_path = os.path.join(args.my_data_folder_path, "result", f"{args.output}.csv")
-	result.to_csv(result_path) # 結果をcsvで保存
-
-def train_unused(args, cell_line):
-	make_training_txt(args, cell_line)
-	print("training classifier...")
-
-	X = np.empty((0, args.embedding_vector_dimention * 2))
-	Y = np.empty(0)
-
-	if args.share_doc2vec: #エンハンサーとプロモーター共存
-		# paragraph vector モデルのロード
-		# os path join を使う
-		model = Doc2Vec.load(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
-		# paragraph_tag_list = list(model.dv.index_to_key)
-		# メモしておいたペア情報を使う
-		fin = open('training.txt','r')
-		for _, line in enumerate(fin):
-			data = line.strip().split()
-			enhancer_tag = data[0] # "ENHANCER_0" などのembedding vector タグ
-			promoter_tag = data[1] # "PROMOTER_0" などのembedding vector タグ
-			label = int(data[2])
-
-			# if (enhancer_tag not in paragraph_tag_list) or (promoter_tag not in paragraph_tag_list):
-			# 	continue
-
-			enhancer_vec = model.dv[enhancer_tag] # エンハンサーのembedding vector
-			promoter_vec = model.dv[promoter_tag] # プロモーターのembedding vector
-			enhancer_vec = enhancer_vec.reshape((1,args.embedding_vector_dimention))
-			promoter_vec = promoter_vec.reshape((1,args.embedding_vector_dimention))
-			concat_vec = np.column_stack((enhancer_vec,promoter_vec)) # 要チェック
-			X = np.append(X, concat_vec, axis=0)
-			Y = np.append(Y, label) # 正例か負例か
-	else: # エンハンサーとプロモーター別々
-		# paragraph vector モデルのロード
-		enhancer_model = Doc2Vec.load(f"{args.my_data_folder_path}/d2v/{cell_line},el={args.E_extended_left_length},er={args.E_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
-		promoter_model = Doc2Vec.load(f"{args.my_data_folder_path}/d2v/{cell_line},pl={args.P_extended_left_length},pr={args.P_extended_right_length},kmer={args.way_of_kmer},N={args.sentence_cnt}.d2v")
-
-		enhancer_paragraph_tag_list = list(enhancer_model.dv.doctags)
-		promoter_paragraph_tag_list = list(promoter_model.dv.doctags)
-
-		# メモしておいたペア情報を使う
-		fin = open('training.txt','r')
-		for i, line in enumerate(fin):
-			data = line.strip().split()
-			enhancer_tag = data[0] # "ENHANCER_0" などのembedding vector タグ
-			promoter_tag = data[1] # "PROMOTER_0" などのembedding vector タグ
-			label = int(data[2])
-
-			# if (enhancer_tag not in enhancer_paragraph_tag_list) or (promoter_tag not in promoter_paragraph_tag_list):
-			# 	continue
-
-			enhancer_vec = enhancer_model.dv[enhancer_tag] # エンハンサーのembedding vector
-			promoter_vec = promoter_model.dv[promoter_tag] # プロモーターのembedding vector
-			enhancer_vec = enhancer_vec.reshape((1,args.embedding_vector_dimention))
-			promoter_vec = promoter_vec.reshape((1,args.embedding_vector_dimention))
-			concat_vec = np.column_stack((enhancer_vec,promoter_vec))
-			X = np.append(X, concat_vec, axis=0)
-			Y = np.append(Y, label) # 正例か負例か
-
-	
-
-	# 分類器を用意
-	estimator = GradientBoostingClassifier(n_estimators = 4000, learning_rate = 0.001, max_depth = 25, max_features = 'log2', random_state = 0)
-	# estimator = KNeighborsClassifier(n_neighbors=5) # k近傍法
-
-	# t_sneにて図示
-	t_SNE(args, X, Y)
-
-	# 評価する指標
-	score_funcs = ['f1', 'roc_auc', 'average_precision']
-	cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=0)
-	print("training classifier...")
-	scores = cross_validate(estimator, X, Y, scoring = score_funcs, cv = cv, n_jobs = -1) # ここで学習開始
-
-	# 得られた指標を出力する & 結果の記録
-	print('F1:', scores['test_f1'].mean())
-	print('auROC:', scores['test_roc_auc'].mean())
-	print('auPRC:', scores['test_average_precision'].mean())
-	f1 = scores['test_f1']
-	f1 = np.append(f1, scores['test_f1'].mean())
-	auROC = scores['test_roc_auc']
-	auROC = np.append(auROC, scores['test_roc_auc'].mean())
-	auPRC =  scores['test_average_precision']
-	auPRC = np.append(auPRC, scores['test_average_precision'].mean())
-	result = pd.DataFrame(
-		{
-		"F1": f1,
-		"auROC": auROC,
-		"auPRC": auPRC,
-		},
-		index = ["1-fold", "2-fold", "3-fold", "4-fold", "5-fold", "6-fold", "7-fold", "8-fold", "9-fold", "10-fold", "mean"]	
-	)
-
-	result.to_csv(f"{args.my_data_folder_path}/result/{args.output}.csv") # 結果をcsvで保存
-
-# 入力データと中間で作られるファイルを全部おく

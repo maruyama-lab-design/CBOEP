@@ -1,4 +1,5 @@
 from random import randint
+import pickle
 
 
 def make_kmer_list(k, stride, sequence):
@@ -43,8 +44,14 @@ def make_random_kmer_list(k_min, k_max, sequence):
 	return sentence
 
 
-# test
-# seq = "acgtacgtacgttagaccgattagatgacagattctgctacag"
-# for _ in range(10):
-# 	print(make_random_kmer_list(1, 3, seq))
+def pickle_dump(obj, path):
+    with open(path, mode='wb') as f:
+        pickle.dump(obj,f)
+
+
+def pickle_load(path):
+    with open(path, mode='rb') as f:
+        data = pickle.load(f)
+        return data
+
 

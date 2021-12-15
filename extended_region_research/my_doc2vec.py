@@ -19,6 +19,45 @@ from sklearn.ensemble import GradientBoostingClassifier
 # 自作関数
 import utils
 
+def tagged_sentence_generator_unused(args, cell_line):
+	# print("入力sequenceをファイルに書き出します．")
+
+	enhancer_filename = f"{args.my_data_folder_path}/fasta/enhancer/{cell_line}_enhancers_editted.fa"
+	promoter_filename = f"{args.my_data_folder_path}/fasta/promoter/{cell_line}_promoters_editted.fa"
+	
+	with open(enhancer_filename, "rt") as enh_fin, open(promoter_filename, "rt") as prm_fin:
+		for fin in [enh_fin, prm_fin]:
+			for record in SeqIO.parse(fin, "fasta"):
+				paragraph_tag = record.id.split("~")[0]
+				region_seq = str(record.seq)
+				if args.way_of_kmer == "normal": #固定長k-mer
+					region_seq_kmer_list = utils.make_kmer_list(args.k, args.stride, region_seq)
+					yield TaggedDocument(region_seq_kmer_list, [paragraph_tag])
+				elif args.way_of_kmer == "random": #ランダム長k-mer
+					for _ in range(args.sentence_cnt):
+						region_seq_kmer_list = utils.make_random_kmer_list(args.k_min, args.k_max, region_seq)
+						yield TaggedDocument(region_seq_kmer_list, [paragraph_tag])
+
+class TaggedSentencesIterator_unused():
+	# 参考 https://jacopofarina.eu/posts/gensim-generator-is-not-iterator/
+	def __init__(self, generator_function, args, cell_line):
+		self.generator_function = generator_function
+		self.args = args
+		self.cell_line = cell_line
+		self.generator = self.generator_function(self.args, self.cell_line)
+
+	def __iter__(self):
+		# reset the generator
+		self.generator = self.generator_function(self.args, self.cell_line)
+		return self
+
+	def __next__(self):
+		result = next(self.generator)
+		if result is None:
+			raise StopIteration
+		else:
+			return result
+
 def make_input_txt_for_doc2vec(args, cell_line):
 	print("入力sequenceをファイルに書き出します．")
 
@@ -40,13 +79,13 @@ def make_input_txt_for_doc2vec(args, cell_line):
 							region_seq_kmer_list = utils.make_random_kmer_list(args.k_min, args.k_max, region_seq)
 							fout.write(paragraph_tag + "\t" + "\t".join(region_seq_kmer_list) + "\n")
 
-def sentence_generator(filename):
-	with open(filename, "r") as fin:
+def tagged_sentence_generator(filename):
+	with open(filename, "r") as fin: # file読み込み
 		for line in fin:
 			tag_and_sentence = line.split()
 			yield TaggedDocument(tag_and_sentence[1:], [tag_and_sentence[0]])
 
-class SentencesIterator():
+class TaggedSentencesIterator():
 	# これは正しく動いてそう　epochごとにシャッフルはしてない？
 	# 参考 https://jacopofarina.eu/posts/gensim-generator-is-not-iterator/
 	def __init__(self, generator_function, filename):
@@ -67,51 +106,16 @@ class SentencesIterator():
 			return result
 
 
-class CorporaIterator():
-	# こっちを使うとおかしくなる...?
-	def __init__(self, args, fileobject):
-		self.args = args
-		self.fileobject = fileobject
-
-	def __iter__(self):
-		return self
-
-	def __next__(self):
-		tag_and_sequence_list = next(self.fileobject)
-		if tag_and_sequence_list is None:
-			raise StopIteration
-		else:
-			paragraph_tag, sequence = tag_and_sequence_list.split()[0], tag_and_sequence_list.split()[1:]
-			return TaggedDocument(sequence, [paragraph_tag])
-
-
 def make_paragraph_vector_from_enhancer_and_promoter_using_iterator(args, cell_line): # イテレータを使ってメモリの節約を試みる
-	make_input_txt_for_doc2vec(args, cell_line) # 前処理
 
 	print(f"{cell_line} のエンハンサーとプロモーターの両方を1つのdoc2vecで学習します")
 	print("doc2vec のための前処理 開始")
+	make_input_txt_for_doc2vec(args, cell_line) # 前処理(ファイル書き出し)
 	# _____________________________________
 	print(f"doc2vec training...")
-	# with open("input_for_d2v.txt") as fileobject:
-	# 	corpus_iter = CorporaIterator(args, fileobject)
-	# 	model = Doc2Vec(
-	# 		min_count=1,
-	# 		window=10,
-	# 		vector_size=args.embedding_vector_dimention,
-	# 		sample=1e-4,
-	# 		negative=5,
-	# 		workers=8,
-	# 		epochs=10
-	# 	)
-	# 	model.build_vocab(corpus_iter)
-	# 	model.train(
-	# 		corpus_iter,
-	# 		total_examples=model.corpus_count,
-	# 		epochs=model.epochs
-	# 	)
-	sentence_iter = SentencesIterator(sentence_generator, "input_for_d2v.txt")
+	tagged_sentence_iter = TaggedSentencesIterator(tagged_sentence_generator, "input_for_d2v.txt")
 	model = Doc2Vec(
-		sentence_iter,
+		tagged_sentence_iter,
 		min_count=1,
 		window=10,
 		vector_size=args.embedding_vector_dimention,
