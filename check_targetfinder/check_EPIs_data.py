@@ -17,8 +17,10 @@ def make_directory():
 
     os.system(f"mkdir -p {data_root}/TargetFinder")
     os.system(f"mkdir -p {data_root}/ep2vec")
+    os.system(f"mkdir -p {data_root}/my")
     os.system(f"mkdir -p {fig_root}/TargetFinder")
     os.system(f"mkdir -p {fig_root}/ep2vec")
+    os.system(f"mkdir -p {fig_root}/my")
 
 def download_pair_data(cell_line):
     # # data directory を この~.pyと同じ場所に作成
