@@ -30,7 +30,7 @@ def my_project(args, cell_line):
 
 	print("実験開始")
 	# args.output = f"{cell_line},el={str(args.E_extended_left_length)},er={str(args.E_extended_right_length)},pl={str(args.P_extended_left_length)},pr={str(args.P_extended_right_length)},share_doc2vec={str(args.share_doc2vec)},d={args.embedding_vector_dimention}kmer={args.way_of_kmer},N={args.sentence_cnt}"
-	args.output = f"{cell_line},d={args.embedding_vector_dimention},way_of_kmer={args.way_of_kmer},k={args.k},s={args.stride},N={args.sentence_cnt},kmin={args.k_min},kmax={args.k_max},way_of_cv={args.way_of_cv},clf={args.classifier},trees={args.gbrt_tree_cnt}"
+	args.output = f"{cell_line},d={args.embedding_vector_dimention},way_of_kmer={args.way_of_kmer},k={args.k},s={args.stride},N={args.sentence_cnt},kmin={args.k_min},kmax={args.k_max},way_of_cv={args.way_of_cv},clf={args.classifier},trees={args.gbrt_tree_cnt},train_data={args.research_name}"
 	print(f"output = {args.output}")
 
 	# 必要なディレクトリの作成
@@ -43,14 +43,14 @@ def my_project(args, cell_line):
 		args.download_reference_genome = False # 一回のみ
 
 	# エンハンサープロモーターのダウンロード
-	data_download.download_enhancer_and_promoter(args, cell_line)
+	# data_download.download_enhancer_and_promoter(args, cell_line)
 
 	if os.path.exists(args.output): # 存在してたらスキップ
 		print(args.output + " スキップ")
 		return 
 	
 	# bedの作成&fastaの作成&tableの作成
-	create_region_sequence_and_table(args, cell_line)
+	# create_region_sequence_and_table(args, cell_line)
 
 	# doc2vec (stage1)
 	if args.stage2_only == False:
@@ -68,6 +68,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="エンハンサー, プロモーターの両端を延長したものに対し, doc2vecを行い,EPIs予測モデルの学習, 評価をする.")
 	parser.add_argument("--targetfinder_data_root_url", help="enhancer,promoterデータをダウンロードする際のtargetfinderのルートurl", default="https://github.com/shwhalen/targetfinder/raw/master/paper/targetfinder/")
 	parser.add_argument("--genome_browser_url", help="reference genome (hg19)をダウンロードする際のurl", default="https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/latest")
+	parser.add_argument("--research_name", type=str, choices=['ep2vec', 'TargetFinder', 'my'], help="どこ由来の学習データを使うか", default="my")
 	parser.add_argument("-my_data_folder_path", help="自分のデータフォルダパス", default="/Users/ylwrvr/卒論/Koga_code/data")
 	parser.add_argument("--make_directory", action="store_true", help="実験に必要なディレクトリ構成を作る")
 	parser.add_argument("--download_reference_genome", action="store_true", help="リファレンスゲノムを外部からダウンロードするか")

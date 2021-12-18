@@ -23,7 +23,7 @@ import data_download
 from utils import pickle_dump, pickle_load
 
 
-def make_training_df(args, cell_line):
+def make_training_df_unused(args, cell_line):
 	# 分類器学習の際の前処理
 	# bed.csv から 各paragraph tag をそのindex値より取得し，train.csvに新しいcolumnとして書き込む
 	
@@ -58,8 +58,6 @@ def make_training_df(args, cell_line):
 	
 	drop_index_list = train_df.query('enhancer_tag == "nan" or promoter_tag == "nan"').index.tolist()
 	train_df = train_df.drop(drop_index_list, axis=0)
-
-
 
 	train_df.to_csv(train_path, index=False)
 	print("トレーニングデータをcsvファイルにて書き込み終了")

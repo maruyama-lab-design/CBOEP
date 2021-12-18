@@ -16,6 +16,9 @@ def make_directory(args):
 
     os.system(f"mkdir -p {args.my_data_folder_path}/result")
 
-    os.system(f"mkdir -p {args.my_data_folder_path}/train")
+    os.system(f"mkdir -p {args.my_data_folder_path}/train/ep2vec")
+    os.system(f"mkdir -p {args.my_data_folder_path}/train/TargetFinder")
+    os.system(f"mkdir -p {args.my_data_folder_path}/train/my")
+
 
     os.system(f"mkdir -p {args.my_data_folder_path}/log")

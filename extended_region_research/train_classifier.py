@@ -23,7 +23,7 @@ from utils import pickle_dump
 import data_download
 
 
-def make_training_df(args, cell_line):
+def make_training_df_unused(args, cell_line):
 	# 分類器学習の際の前処理
 	# bed.csv から 各paragraph tag をそのindex値より取得し，train.csvに新しいcolumnとして書き込む
 	
@@ -31,11 +31,11 @@ def make_training_df(args, cell_line):
 	
 	# トレーニングデータをtargetfinderからダウンロード & 読み込み
 	data_download.download_training_data(args, cell_line)
-	train_path = os.path.join(args.my_data_folder_path, "train", f"{cell_line}_train.csv")
+	train_path = os.path.join(args.my_data_folder_path, "train", args.research_name, f"{cell_line}_train.csv")
 	train_df = pd.read_csv(train_path, usecols=["enhancer_chrom", "enhancer_name", "promoter_name", "label"]) # original
 
-	train_df["enhancer_tag"] = 'nan' # カラムの追加
-	train_df["promoter_tag"] = 'nan' # カラムの追加
+	train_df["enhancer_name"] = 'nan' # カラムの追加
+	train_df["promoter_name"] = 'nan' # カラムの追加
 
 	for region_type in ["enhancer", "promoter"]:
 
@@ -53,15 +53,15 @@ def make_training_df(args, cell_line):
 				train_index_list = train_df.query('promoter_name == @region_name').index.tolist()
 				if len(train_index_list) == 0:
 					continue
-				train_df.loc[train_index_list, "promoter_tag"] = "promoter_" + str(region_index)
+				train_df.loc[train_index_list, "promoter_name"] = "promoter_" + str(region_index)
 
 	
-	drop_index_list = train_df.query('enhancer_tag == "nan" or promoter_tag == "nan"').index.tolist()
+	drop_index_list = train_df.query('enhancer_tag == "nan" or promoter_name == "nan"').index.tolist()
 	train_df = train_df.drop(drop_index_list, axis=0)
 
-
-
-	train_df.to_csv(train_path, index=False)
+def make_training_df(args, cell_line):
+	# トレーニングデータをtargetfinderからダウンロード & 読み込み
+	data_download.download_training_data(args, cell_line)
 	print("トレーニングデータをcsvファイルにて書き込み終了")
 
 			
@@ -105,11 +105,11 @@ def make_training_txt_unused(args, cell_line):
 			print(row_data["promoter_name"])
 			continue
 		promoter_index = promoter_index_list[0]
-		promoter_tag = "promoter_" + str(promoter_index)
+		promoter_name = "promoter_" + str(promoter_index)
 		label = row_data["label"]
 
 		# enhancer の ~ 番目と promoter の ~ 番目 は pair/non-pair であるというメモを書き込む
-		fout.write(enhancer_tag +'\t'+ promoter_tag + '\t' + str(label) + '\n')
+		fout.write(enhancer_tag +'\t'+ promoter_name + '\t' + str(label) + '\n')
 	fout.close()
 
 
@@ -247,10 +247,10 @@ def my_cross_validation(args, classifier, X_df, Y_df):
 
 
 def train(args, cell_line):
-	make_training_df(args, cell_line) # train_csvをダウンロード&修正
+	make_training_df(args, cell_line) # train_csvをダウンロード
 
-	train_path = os.path.join(args.my_data_folder_path, "train", f"{cell_line}_train.csv")
-	train_df = pd.read_csv(train_path, usecols=["enhancer_chrom", "enhancer_tag", "promoter_tag", "label"]) # train_csvを読み込み
+	train_path = os.path.join(args.my_data_folder_path, "train", args.research_name, f"{cell_line}_train.csv")
+	train_df = pd.read_csv(train_path, usecols=["enhancer_chrom", "enhancer_name", "promoter_name", "label"]) # train_csvを読み込み
 
 	# paragraph vector モデルのロード
 	d2v_model_path = os.path.join(args.my_data_folder_path, "d2v", f"{args.output}.d2v")
@@ -261,10 +261,11 @@ def train(args, cell_line):
 	# doc2vecに渡してないtrain data を削除
 	drop_index_list = []
 	for pair_index, row_data in train_df.iterrows():
-		enhancer_tag = str(row_data["enhancer_tag"]) # "ENHANCER_0" などのembedding vector タグ
-		promoter_tag = str(row_data["promoter_tag"]) # "PROMOTER_0" などのembedding vector タグ
+		enhancer_name = str(row_data["enhancer_name"]) # "ENHANCER_0" などのembedding vector タグ
+		promoter_name = str(row_data["promoter_name"]) # "PROMOTER_0" などのembedding vector タグ
 
-		if (enhancer_tag not in paragraph_tag_list) or (promoter_tag not in paragraph_tag_list):
+		if (enhancer_name not in paragraph_tag_list) or (promoter_name not in paragraph_tag_list):
+			print(enhancer_name, promoter_name, label, "dropped")
 			drop_index_list.append(pair_index)
 			
 	train_df = train_df.drop(drop_index_list, axis=0)
@@ -278,13 +279,13 @@ def train(args, cell_line):
 	
 	for pair_index, row_data in train_df.iterrows():
 
-		enhancer_tag = str(row_data["enhancer_tag"]) # "ENHANCER_0" などのembedding vector タグ
-		promoter_tag = str(row_data["promoter_tag"]) # "PROMOTER_0" などのembedding vector タグ
+		enhancer_name = str(row_data["enhancer_name"]) # "ENHANCER_0" などのembedding vector タグ
+		promoter_name = str(row_data["promoter_name"]) # "PROMOTER_0" などのembedding vector タグ
 		label = int(row_data["label"])
 		chrom = row_data["enhancer_chrom"]
 
-		enhancer_vec = d2v_model.dv[enhancer_tag] # エンハンサーのembedding vector
-		promoter_vec = d2v_model.dv[promoter_tag] # プロモーターのembedding vector
+		enhancer_vec = d2v_model.dv[enhancer_name] # エンハンサーのembedding vector
+		promoter_vec = d2v_model.dv[promoter_name] # プロモーターのembedding vector
 		enhancer_vec = enhancer_vec.reshape((1,args.embedding_vector_dimention))
 		promoter_vec = promoter_vec.reshape((1,args.embedding_vector_dimention))
 		concat_vec = np.column_stack((enhancer_vec,promoter_vec)) # concat

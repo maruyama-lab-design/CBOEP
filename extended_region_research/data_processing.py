@@ -55,8 +55,9 @@ def make_extended_bedfile(args, cell_line):
 				if chrom_max_size < end:
 					continue
 
-				paragraph_tag = region_type + "_" + str(index) # enhancer_0 など
-				fout.write(f"{chrom}\t{start}\t{end}\t{paragraph_tag}~{name}\n")
+				# paragraph_tag = region_type + "_" + str(index) # enhancer_0 など
+				# fout.write(f"{chrom}\t{start}\t{end}\t{paragraph_tag}~{name}\n")
+				fout.write(f"{chrom}\t{start}\t{end}\t{name}\n")
 
 
 def make_extended_fastafile(args, cell_line):
@@ -81,36 +82,6 @@ def make_extended_fastafile(args, cell_line):
 			fout.write(open(seq.seqfn).read())
 
 
-def make_bedfile_and_fastafile_unused(args, cell_line):
-	# 前工程で作成したcsvファイルをもとに，エンハンサー，プロモーターの延長後の配列をfastaファイルに切り出す
-	print("fastaに切り出します")
-	hg19_fasta = gzip.open(f"{args.my_data_folder_path}/reference_genome/hg19.fa.gz", "rt")
-	record_dict = SeqIO.to_dict(SeqIO.parse(hg19_fasta, "fasta"))
-	hg19_fasta.close() # メモリ管理のため
-	for region_type in ["enhancer", "promoter"]:
-		print(f"{region_type}...")
-		bed_df = pd.read_csv(f"{args.my_data_folder_path}/bed/{region_type}/{cell_line}_{region_type}s.bed.csv")
-		output_fasta_path = f"{args.my_data_folder_path}/fasta/{region_type}/{cell_line}_{region_type}s.fa"
-		short_seq_records = []
-		for index, row_data in tqdm.tqdm(bed_df.iterrows()):
-			chrom = row_data["chrom"]
-			start = row_data["start_origin"]
-			end = row_data["end_origin"]
-			if region_type == "enhancer":
-				start -= args.E_extended_left_length
-				end += args.E_extended_right_length
-			elif region_type == "promoter":
-				start -= args.P_extended_left_length
-				end += args.P_extended_right_length
-			long_seq = record_dict[chrom].seq
-			short_seq = str(long_seq)[start:end]
-			short_seq_record = SeqRecord(Seq(short_seq), id=row_data["name_origin"], description="")
-			short_seq_records.append(short_seq_record)
-
-		with open(output_fasta_path, "w") as fout:
-			SeqIO.write(short_seq_records, fout, "fasta")
-			
-
 def edit_fastafile(args, cell_line):
 	# 配列内の欠損データを削除したり，配列内の文字を全て小文字にしたりします．
 	# また，配列のcomplementも追加します．
@@ -131,7 +102,6 @@ def edit_fastafile(args, cell_line):
 				fout.write(seq + "\n")
 				fout.write(">" + str(record.id) + " complement" + "\n") # complement 配列
 				fout.write(complement_seq + "\n")
-
 
 
 def create_region_sequence_and_table(args, cell_line):

@@ -43,7 +43,22 @@ def download_chrome_sizes(args):
 	df.to_csv(output, index=False)
 
 def download_training_data(args, cell_line):
+	targetfinder_output_root = "https://github.com/shwhalen/targetfinder/raw/master/paper/targetfinder"
+	ep2vec_root = "https://github.com/wanwenzeng/ep2vec/raw/master"
+	
 	print("training data downloading...")
-	url = f"https://raw.githubusercontent.com/wanwenzeng/ep2vec/master/{cell_line}train.csv"
-	df = pd.read_csv(url, usecols=["bin", "enhancer_chrom", "enhancer_name", "promoter_name", "label"])
-	df.to_csv(f"{args.my_data_folder_path}/train/{cell_line}_train.csv", index=False)
+
+	# training data の url (TargetFinder)
+	targetfinder_url = os.path.join(targetfinder_output_root, cell_line, "output-ep", "training.csv.gz")
+	targetfinder_train_df = pd.read_csv(targetfinder_url,compression='gzip',error_bad_lines=False)
+
+	# training data の url (ep2vec)
+	ep2vec_url = os.path.join(ep2vec_root, f"{cell_line}train.csv")
+	ep2vec_train_df = pd.read_csv(ep2vec_url)
+
+	# 保存する名前 data下に置く
+	targetfinder_training_data_filename = os.path.join(args.my_data_folder_path, "train", "TargetFinder", f"{cell_line}_train.csv")
+	targetfinder_train_df.to_csv(targetfinder_training_data_filename, index=False)
+
+	ep2vec_training_data_filename = os.path.join(args.my_data_folder_path, "train", "ep2vec", f"{cell_line}_train.csv")
+	ep2vec_train_df.to_csv(ep2vec_training_data_filename, index=False)
