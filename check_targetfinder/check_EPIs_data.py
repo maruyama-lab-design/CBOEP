@@ -47,24 +47,8 @@ def check_chr(cell_line):
 
 
 
-#____________...maybe unused...___________
-def check_enhancer_pos_std():
-    original_df = pd.read_csv("/Users/ylwrvr/卒論/Koga_code/check_targetfinder/pair_data/GM12878_train.csv", usecols=["bin","enhancer_chrom","enhancer_distance_to_promoter","enhancer_end","enhancer_name","enhancer_start","label","promoter_chrom","promoter_end","promoter_name","promoter_start"])
-    pos_and_neg_df = original_df.groupby(["label"])
-    for name, pos_or_neg_df in pos_and_neg_df:
-        if name == 1:
-            print("正例の場合")
-        elif name == 0:
-            print("不例の場合")
-        df_divided_by_promoters = pos_or_neg_df.groupby(["promoter_name"])
-        for promoter_name, df_by_promoter in df_divided_by_promoters:
-            df_by_promoter["enhancer_center"] = (df_by_promoter["enhancer_start"] + df_by_promoter["enhancer_end"]) // 2
-            print(f"{promoter_name}: cnt {len(df_by_promoter)} std {df_by_promoter['enhancer_center'].std()}")
-
-
-
-def check_PosNeg_ratio_by_each_promoter(cell_line):
-    for research_name in ["TargetFinder", "ep2vec"]:
+def check_PosNeg_ratio_by_each_promoter(cell_line, research_name_list):
+    for research_name in research_name_list:
         train_df_path = os.path.join(data_root, research_name, f"{cell_line}_train.csv")
         pair_df = pd.read_csv(train_df_path, usecols=["enhancer_name","label","promoter_name"])
 
@@ -90,8 +74,8 @@ def check_PosNeg_ratio_by_each_promoter(cell_line):
         figure.savefig(fig_path)
 
 
-def check_PosNeg_ratio_by_each_enhancer(cell_line):
-    for research_name in ["TargetFinder", "ep2vec"]:
+def check_PosNeg_ratio_by_each_enhancer(cell_line, research_name_list):
+    for research_name in research_name_list:
         train_df_path = os.path.join(data_root, research_name, f"{cell_line}_train.csv")
         pair_df = pd.read_csv(train_df_path, usecols=["enhancer_name","label","enhancer_name"])
 
@@ -125,7 +109,9 @@ if __name__ == "__main__":
     make_directory()
 
     cell_line_list = ["K562", "GM12878", "HUVEC", "HeLa-S3", "NHEK"]
+    # research_name_list = ["TargetFinder", "ep2vec", "my"]
+    research_name_list = ["my"]
     for cell_line in cell_line_list:
         # download_pair_data(cell_line)
-        check_PosNeg_ratio_by_each_promoter(cell_line)
-        # check_PosNeg_ratio_by_each_enhancer(cell_line)
+        check_PosNeg_ratio_by_each_promoter(cell_line, research_name_list)
+        check_PosNeg_ratio_by_each_enhancer(cell_line, research_name_list)
