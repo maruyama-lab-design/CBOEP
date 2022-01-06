@@ -4,3 +4,5 @@ test
 memo*
 *.json
 *.pyc
+*.png
+*.csv
