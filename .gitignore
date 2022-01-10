@@ -6,3 +6,9 @@ memo*
 *.pyc
 *.png
 *.csv
+*.fa
+*.bed
+*.sent
+*.gz
+*d2v
+

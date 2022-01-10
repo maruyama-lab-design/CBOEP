@@ -15,5 +15,10 @@ def test_numpy():
 
     print(a[:3, :2])
     
+def test_list():
+    l = [[1, 2], [1, 2], [1, 2]]
+    l = [prob[1] for prob in l]
+    print(l)
 
-test_numpy()
+
+test_list()
