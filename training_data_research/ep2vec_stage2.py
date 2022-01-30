@@ -1,4 +1,5 @@
 # classifier
+from sklearn import svm
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.neighbors import KNeighborsClassifier
@@ -16,8 +17,11 @@ import argparse
 def my_classifier(args):
 	if args.classifier == "GBRT":
 		return GradientBoostingClassifier(n_estimators = args.gbrt_tree_cnt, learning_rate = 0.001, max_depth = 25, max_features = 'log2', random_state = 0)
-	if args.classifier == "KNN":
+	elif args.classifier == "KNN":
 		return KNeighborsClassifier(n_neighbors=args.knn_neighbor_cnt) # k近傍法
+	elif args.classifier == "SVM":
+		return svm.SVC(kernel='linear', random_state=None, probability=True)
+
 
 def classifier_preprocess(args, d2v):
 
@@ -123,25 +127,53 @@ def my_cross_val(args, classifier, X_df, Y_df):
 
 
 def ep2vec_stage2(args):
-	if args.classifier == "GBRT":
-		args.output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_result", args.dataset, args.way_of_cv, args.classifier, str(args.gbrt_tree_cnt))
-	elif args.classifier == "KNN":
-		args.output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_result", args.dataset, args.way_of_cv, args.classifier, args.knn_neighbor_cnt)
+
+	d2v_path = ""
+	input_dir = os.path.join(os.path.dirname(__file__), "ep2vec_d2v", args.cell_line, args.way_of_kmer)
+	if args.way_of_kmer == "normal":
+		d2v_path = os.path.join(input_dir, f"{args.k}_{args.stride}.d2v")
+	elif args.way_of_kmer == "random":
+		d2v_path = os.path.join(input_dir, f"{args.kmin}_{args.kmax}_{args.sentenceCnt}.d2v")
+
+	d2v = Doc2Vec.load(d2v_path)
 	os.system(f"mkdir -p {args.output_dir}")
-	d2v = Doc2Vec.load("training_data_research/ep2vec_d2v/K562/d2v")
 	classifier = my_classifier(args)
 	X_df, Y_df = classifier_preprocess(args, d2v)
 	my_cross_val(args, classifier, X_df, Y_df)
+
+
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="TargetFinderの正例トレーニングデータから新たにトレーニングデータを作成する")
 	parser.add_argument("--dataset", help="どのデータセットを使うか", default="TargetFinder")
 	parser.add_argument("--cell_line", help="細胞株", default="K562")
+	parser.add_argument("--k", help="k-merのk", type=int, default=6)
+	parser.add_argument("--stride", type=int, default=1, help="固定帳のk-merの場合のstride")
+	parser.add_argument("--kmax", help="k-merのk", type=int, default=6)
+	parser.add_argument("--kmin", help="k-merのk", type=int, default=3)
+	parser.add_argument("--sentenceCnt", help="何個複製するか", type=int, default=3)
+	parser.add_argument("--way_of_kmer", choices=["normal", "random"], default="random")
 	parser.add_argument("--vector_size", help="分散表現の次元", type=int, default=100)
 	parser.add_argument("--way_of_cv", help="染色体毎かランダムか", choices=["chromosomal", "random"], default="chromosomal")
-	parser.add_argument("--classifier", type=str, choices=["GBRT", "KNN"], default="GBRT", help="分類器に何を使うか")
+	parser.add_argument("--classifier", type=str, choices=["GBRT", "KNN", "SVM"], default="GBRT", help="分類器に何を使うか")
 	parser.add_argument("--gbrt_tree_cnt", type=int, default=1000, help="GBRTの木の数")
-	parser.add_argument("--knn_neighbor_cnt", type=int, default=10, help="k近傍法の近傍数")
+	parser.add_argument("--knn_neighbor_cnt", type=int, default=5, help="k近傍法の近傍数")
 	args = parser.parse_args()
 
-	ep2vec_stage2(args)
+	dataset_list = ["new", "TargetFinder", "ep2vec"]
+	cell_line_list = ["K562", "GM12878", "HUVEC", "HeLa-S3", "NHEK", "IMR90"]
+	for dataset in dataset_list:
+		for cl in cell_line_list:
+			for classifier in ["GBRT"]:
+				for tree_cnt in [100, 1000, 4000]:
+					args.dataset = dataset
+					args.cell_line = cl
+					args.gbrt_tree_cnt = tree_cnt
+
+					if args.classifier == "GBRT":
+						args.output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_result", args.dataset, args.cell_line, args.way_of_cv, f"{args.classifier}_{args.gbrt_tree_cnt}", "test")
+					elif args.classifier == "KNN":
+						args.output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_result", args.dataset, args.cell_line, args.way_of_cv, f"{args.classifier}_{args.knn_neighbor_cnt}")
+					elif args.classifier == "SVM":
+						args.output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_result", args.dataset, args.cell_line, args.way_of_cv, args.classifier)
+					ep2vec_stage2(args)
