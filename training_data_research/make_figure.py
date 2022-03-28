@@ -41,21 +41,25 @@ def make_heatMap(args, chrom, VV, x_Max, y_Max, regionType, output_path):
 	
 def make_PosNeg_figure(args):
 	output_dir = os.path.join(os.path.dirname(__file__), "figure", args.research_name, args.cell_line)
+	if args.research_name == "new":
+		output_dir = os.path.join(os.path.dirname(__file__), "figure", args.research_name, f"×{args.ratio}", args.cell_line)
 	os.system(f"mkdir -p {output_dir}")
 
 	data_path = os.path.join(os.path.dirname(__file__), "training_data", args.research_name, f"{args.cell_line}_train.csv")
+	if args.research_name == "new":
+		data_path = os.path.join(os.path.dirname(__file__), "training_data", args.research_name, f"×{args.ratio}", f"{args.cell_line}_train.csv")
 	df = pd.read_csv(data_path)
 
 	for regionType in ["enhancer", "promoter"]:
 		posCnt_Max = 0
 		negCnt_Max = 0
-		PosNeg_cnt = np.zeros((30, 30), dtype="int64") # 大きめに用意
+		PosNeg_cnt = np.zeros((1000, 1000), dtype="int64") # 大きめに用意
 		columnName = regionType + "_name"
 
 		for chrom, subdf in df.groupby("enhancer_chrom"):
 			posCnt_Max_by_chrom = 0
 			negCnt_Max_by_chrom = 0
-			PosNeg_cnt_by_chrom = np.zeros((30, 30), dtype="int64") # 大きめに用意
+			PosNeg_cnt_by_chrom = np.zeros((1000, 1000), dtype="int64") # 大きめに用意
 			for regionName, subsubdf in subdf.groupby(columnName):
 				posCnt = len(subsubdf[subsubdf["label"] == 1])
 				negCnt = len(subsubdf[subsubdf["label"] == 0])
@@ -251,16 +255,22 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="TargetFinderの正例トレーニングデータから新たにトレーニングデータを作成する")
 	parser.add_argument("--research_name", help="", default="TargetFinder")
 	parser.add_argument("--cell_line", help="細胞株", default="K562")
+
+	parser.add_argument("--ratio", type=int, help="正例に対し何倍の負例を作るか", default="1")
 	args = parser.parse_args()
 
 	cell_line_list = ["GM12878", "HeLa-S3", "HUVEC", "IMR90", "K562", "NHEK"]
-	research_list = ["ep2vec", "TargetFinder", "new"]
-	# for researchName in research_list:
-	# 	for cell_line in cell_line_list:
-	# 		args.research_name = researchName
-	# 		args.cell_line = cell_line
-	# 		make_PosNeg_figure(args)
+	research_list = ["new"]
+	ratio_list = [1, 2, 3, 4, 5]
 
-	for cell_line in cell_line_list:
-		make_F1_barGraph(["TargetFinder", "ep2vec", "new"], cell_line, ["GBRT_100", "GBRT_1000", "GBRT_4000", "KNN_5", "KNN_10", "KNN_15"])
+	for researchName in research_list:
+		for cell_line in cell_line_list:
+			for ratio in ratio_list:
+				args.ratio = ratio
+				args.research_name = researchName
+				args.cell_line = cell_line
+				make_PosNeg_figure(args)
+
+	# for cell_line in cell_line_list:
+	# 	make_F1_barGraph(["TargetFinder", "ep2vec", "new"], cell_line, ["GBRT_100", "GBRT_1000", "GBRT_4000", "KNN_5", "KNN_10", "KNN_15"])
 	# make_precision_recall_curve(["new", "TargetFinder", "ep2vec"], ["GBRT_100", "GBRT_1000", "GBRT_4000"])

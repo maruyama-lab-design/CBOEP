@@ -10,10 +10,8 @@ def test_pandas():
     print(df)
 
 def test_numpy():
-    a = np.arange(25).reshape(5, 5)
-    print(a)
-
-    print(a[:3, :2])
+    a = np.arange(2, 3)
+    print(np.concatenate(a))
     
 def test_list():
     l = [[1, 2], [1, 2], [1, 2]]
@@ -21,4 +19,4 @@ def test_list():
     print(l)
 
 
-test_list()
+test_numpy()

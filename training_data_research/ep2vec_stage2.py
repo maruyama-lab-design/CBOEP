@@ -64,8 +64,21 @@ def classifier_preprocess(args, d2v):
 	return X_df, Y_df
 
 
-def my_cross_val(args, classifier, X_df, Y_df):
+def get_weights(args, y):
 
+	weights = {
+		0: 1 / (np.sum(y==0) / len(y)),
+		1: 1 / (np.sum(y==1) / len(y))
+	}
+
+	w_df = pd.DataFrame(np.zeros(len(df), 1), columns=["weight"]) 
+	w_df.loc[np.sum(y==0), "weight"] = weights[0]
+	w_df.loc[np.sum(y==1), "weight"] = weights[1]
+
+	return w_df["weight"].values
+
+
+def my_cross_val(args, classifier, X_df, Y_df):
 	if args.way_of_cv == "random":
 		print("random 10-fold cross-validation...")
 
@@ -77,8 +90,8 @@ def my_cross_val(args, classifier, X_df, Y_df):
 			print(f"fold {fold+1}...")
 			x_train, x_test = x[train_index], x[test_index]
 			y_train, y_test = y[train_index], y[test_index]
-
-			classifier.fit(x_train, y_train) # 学習
+			weights = get_weights(args, y_train)
+			classifier.fit(x_train, y_train, sample_weight=weights) # 学習
 			y_pred = classifier.predict_proba(x_test) # predict
 			y_pred = [prob[1] for prob in y_pred] # 正例確率のみを抽出
 			print(y_pred)
@@ -110,8 +123,8 @@ def my_cross_val(args, classifier, X_df, Y_df):
 			y_train = Y_train_df["label"].values
 			x_test = X_test_df.drop(columns="chrom").values
 			y_test = Y_test_df["label"].values
-
-			classifier.fit(x_train, y_train) # 学習
+			weights = get_weights(args, y_train)
+			classifier.fit(x_train, y_train, sample_weight=weights) # 学習
 			y_pred = classifier.predict_proba(x_test) # predict
 			y_pred = [prob[1] for prob in y_pred] # 正例確率のみを抽出
 			print(y_pred)
@@ -142,17 +155,60 @@ def ep2vec_stage2(args):
 	my_cross_val(args, classifier, X_df, Y_df)
 
 
+def getF1(y_true, y_prob, threshold=0.5):
+	y_pred = [1 if i >= threshold else 0 for i in y_prob]
+	# print(f1_score(y_true, y_pred))
+	print(f1_score(y_true, y_pred))
+	return f1_score(y_true, y_pred)
+
+
+def show_averageF1_in_allFold(resultDir_path):
+	files = os.listdir(resultDir_path)
+	files_file = [f for f in files if os.path.isfile(os.path.join(resultDir_path, f))]
+	# print(files_file)   # ['file1', 'file2.txt', 'file3.jpg']
+	F1_score = np.zeros(len(files_file))
+	for i, result_file in enumerate(files_file):
+		# print(result_file)
+		df = pd.read_csv(os.path.join(resultDir_path, result_file))
+		y_true = df["y_test"].tolist()
+		y_prob = df["y_pred"].tolist()
+		F1_score[i] = getF1(y_true, y_prob)
+
+	print({"mean": np.mean(F1_score), "yerr": np.std(F1_score)/math.sqrt(len(files_file))})
+
+
+
+def ep2vec_stage2_v2(args):
+
+	d2v_path = ""
+	input_dir = os.path.join(os.path.dirname(__file__), "ep2vec_d2v", args.cell_line, args.way_of_kmer)
+	if args.way_of_kmer == "normal":
+		d2v_path = os.path.join(input_dir, f"{args.k_list}_{args.stride}.d2v")
+	elif args.way_of_kmer == "random":
+		# d2v_path = os.path.join(input_dir, f"{args.kmin}_{args.kmax}_{args.sentenceCnt}.d2v")
+		print("エラー！！")
+
+	d2v = Doc2Vec.load(d2v_path)
+	os.system(f"mkdir -p {args.output_dir}")
+	classifier = my_classifier(args)
+	X_df, Y_df = classifier_preprocess(args, d2v)
+	my_cross_val(args, classifier, X_df, Y_df)
+
+	# show_averageF1_in_allFold(args.output_dir)
+
+
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="TargetFinderの正例トレーニングデータから新たにトレーニングデータを作成する")
 	parser.add_argument("--dataset", help="どのデータセットを使うか", default="TargetFinder")
 	parser.add_argument("--cell_line", help="細胞株", default="K562")
 	parser.add_argument("--k", help="k-merのk", type=int, default=6)
+	parser.add_argument("--k_list", help="k-merのk", default="1,2,3,4,5,6")
 	parser.add_argument("--stride", type=int, default=1, help="固定帳のk-merの場合のstride")
 	parser.add_argument("--kmax", help="k-merのk", type=int, default=6)
 	parser.add_argument("--kmin", help="k-merのk", type=int, default=3)
 	parser.add_argument("--sentenceCnt", help="何個複製するか", type=int, default=3)
-	parser.add_argument("--way_of_kmer", choices=["normal", "random"], default="random")
+	parser.add_argument("--way_of_kmer", choices=["normal", "random"], default="normal")
 	parser.add_argument("--vector_size", help="分散表現の次元", type=int, default=100)
 	parser.add_argument("--way_of_cv", help="染色体毎かランダムか", choices=["chromosomal", "random"], default="chromosomal")
 	parser.add_argument("--classifier", type=str, choices=["GBRT", "KNN", "SVM"], default="GBRT", help="分類器に何を使うか")
@@ -161,19 +217,36 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	dataset_list = ["new", "TargetFinder", "ep2vec"]
-	cell_line_list = ["K562", "GM12878", "HUVEC", "HeLa-S3", "NHEK", "IMR90"]
-	for dataset in dataset_list:
-		for cl in cell_line_list:
-			for classifier in ["GBRT"]:
-				for tree_cnt in [100, 1000, 4000]:
-					args.dataset = dataset
-					args.cell_line = cl
-					args.gbrt_tree_cnt = tree_cnt
+	cell_line_list = ["GM12878"]
 
-					if args.classifier == "GBRT":
-						args.output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_result", args.dataset, args.cell_line, args.way_of_cv, f"{args.classifier}_{args.gbrt_tree_cnt}", "test")
-					elif args.classifier == "KNN":
-						args.output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_result", args.dataset, args.cell_line, args.way_of_cv, f"{args.classifier}_{args.knn_neighbor_cnt}")
-					elif args.classifier == "SVM":
-						args.output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_result", args.dataset, args.cell_line, args.way_of_cv, args.classifier)
-					ep2vec_stage2(args)
+	args.dataset = "new"
+	args.classifier = "GBRT"
+	args.gbrt_tree_cnt = 4000
+	args.way_of_cv = "chromosomal"
+	k_mer_set = ["1", "2", "3", "4", "5", "6", "1,2,3,4,5,6", "1,2", "2,3", "3,4", "4,5", "5,6", "1,2,3", "2,3,4", "3,4,5", "4,5,6"]
+	args.stride = 1
+	for cl in cell_line_list:
+		for k_list in k_mer_set:
+			args.cell_line = cl
+			args.k_list = k_list
+			args.output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_result", args.dataset, args.cell_line, args.way_of_cv, f"{args.k_list}_{args.stride}",f"{args.classifier}_{args.gbrt_tree_cnt}")
+			ep2vec_stage2_v2(args)
+
+	# for dataset in dataset_list:
+	# 	for cl in cell_line_list:
+	# 		for classifier in ["GBRT"]:
+	# 			for cv in ["random", "chromosomal"]:
+	# 				for tree_cnt in [100, 1000, 4000]:
+	# 					args.dataset = dataset
+	# 					args.cell_line = cl
+	# 					args.classifier = classifier
+	# 					args.way_of_cv = cv
+	# 					args.gbrt_tree_cnt = tree_cnt
+
+	# 					if args.classifier == "GBRT":
+	# 						args.output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_result", args.dataset, args.cell_line, args.way_of_cv, f"{args.classifier}_{args.gbrt_tree_cnt}")
+	# 					elif args.classifier == "KNN":
+	# 						args.output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_result", args.dataset, args.cell_line, args.way_of_cv, f"{args.classifier}_{args.knn_neighbor_cnt}")
+	# 					elif args.classifier == "SVM":
+	# 						args.output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_result", args.dataset, args.cell_line, args.way_of_cv, args.classifier)
+	# 					ep2vec_stage2(args)

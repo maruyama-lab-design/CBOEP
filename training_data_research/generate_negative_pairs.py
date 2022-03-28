@@ -5,20 +5,28 @@ import pulp
 
 
 def download_trainingData(args):
-	# data directory を この~.pyと同じ場所に作成
-	output_dir = os.path.join(os.path.dirname(__file__), "training_data", "TargetFinder")
-	os.system(f"mkdir -p {output_dir}")
-	# 保存先
-	output_path = os.path.join(output_dir, f"{args.cell_line}_train.csv")
-	if os.path.exists(output_path):
-		return 0
 
-	# training data の url (TargetFinder)からダウンロード
-	targetfinder_url = os.path.join(args.targetfinder_root, args.cell_line, "output-ep", "training.csv.gz")
-	targetfinder_train_df = pd.read_csv(targetfinder_url,compression='gzip',error_bad_lines=False)
+	for researchName in ["TargetFinder", "ep2vec"]:
+		# data directory を この~.pyと同じ場所に作成
+		output_dir = os.path.join(os.path.dirname(__file__), "training_data", researchName)
+		os.system(f"mkdir -p {output_dir}")
+		# 保存先
+		output_path = os.path.join(output_dir, f"{args.cell_line}_train.csv")
+		if os.path.exists(output_path):
+			continue
 
-	# 保存
-	targetfinder_train_df.to_csv(output_path, index=False)
+		# training data の url (TargetFinder)からダウンロード
+		url = ""
+		train_df = ""
+		if researchName == "TargetFinder":
+			url = os.path.join(args.targetfinder_root, args.cell_line, "output-ep", "training.csv.gz")
+			train_df = pd.read_csv(url,compression='gzip',error_bad_lines=False)
+		elif researchName == "ep2vec":
+			url = os.path.join(args.ep2vec_root, f"{args.cell_line}train.csv")
+			train_df = pd.read_csv(url)
+
+		# 保存
+		train_df.to_csv(output_path, index=False)
 
 
 def extract_positive_pairs(args):
@@ -70,13 +78,13 @@ def make_bipartiteGraph(args):
 
 		# source => 各エンハンサーの容量は，各エンハンサーの正例辺の次数
 		for enhName in enhDict.keys():
-			cap = len(enhDict[enhName])
+			cap = len(enhDict[enhName]) * args.ratio
 			G_from.append("source")
 			G_to.append(enhName)
 			G_cap.append(cap)
 		# 各プロモーター => sinkの容量は，各プロモーターの正例辺の次数
 		for prmName in prmDict.keys():
-			cap = len(prmDict[prmName])
+			cap = len(prmDict[prmName]) * args.ratio
 			G_from.append(prmName)
 			G_to.append("sink")
 			G_cap.append(cap)
@@ -100,7 +108,7 @@ def make_bipartiteGraph(args):
 			index=None
 		)
 
-		output_dir = os.path.join(os.path.dirname(__file__), "bipartiteGraph", args.cell_line, chrom)
+		output_dir = os.path.join(os.path.dirname(__file__), "bipartiteGraph", f"×{args.ratio}", args.cell_line, chrom)
 		os.system(f"mkdir -p {output_dir}")
 		output_path = os.path.join(output_dir, "maxFlow_preprocess.csv")
 		bipartiteGraph.to_csv(output_path, index=False)
@@ -109,7 +117,7 @@ def maximumFlow(args):
 	# 線計画法にて最大流問題を解く
 	chromList = [f"chr{i}" for i in list(range(1, 23)) + ["X"]]
 	for chrom in chromList:
-		data_path = os.path.join(os.path.dirname(__file__), "bipartiteGraph", args.cell_line, chrom, "maxFlow_preprocess.csv")
+		data_path = os.path.join(os.path.dirname(__file__), "bipartiteGraph", f"×{args.ratio}", args.cell_line, chrom, "maxFlow_preprocess.csv")
 		df = pd.read_csv(data_path)
 
 		from_list = df["from"].tolist()
@@ -151,7 +159,7 @@ def maximumFlow(args):
 		# 'Var'変数の結果の値をまとめて'Val'列にコピーしている
 		df['Val'] = df.Var.apply(pulp.value)
 
-		output_path = os.path.join(os.path.dirname(__file__), "bipartiteGraph", args.cell_line, chrom, "maxFlow_result.csv")
+		output_path = os.path.join(os.path.dirname(__file__), "bipartiteGraph", f"×{args.ratio}", args.cell_line, chrom, "maxFlow_result.csv")
 		df.to_csv(output_path, index=False)
 
 
@@ -166,7 +174,7 @@ def assemble_new_trainingData(args):
 	maximumFlow_result_df = pd.DataFrame(columns=["enhancer_chrom", "from", "to"])
 	chromList = [f"chr{i}" for i in list(range(1, 23)) + ["X"]]
 	for chrom in chromList:
-		maximumFlow_result_path = os.path.join(os.path.dirname(__file__), "bipartiteGraph", args.cell_line, chrom, "maxFlow_result.csv")
+		maximumFlow_result_path = os.path.join(os.path.dirname(__file__), "bipartiteGraph", f"×{args.ratio}", args.cell_line, chrom, "maxFlow_result.csv")
 		maximumFlow_result_subdf = pd.read_csv(maximumFlow_result_path, usecols=["from", "to", "Val"])
 
 		# いらない行の削除
@@ -188,29 +196,36 @@ def assemble_new_trainingData(args):
 	new_trainingData_df = pd.concat([positive_only_df, maximumFlow_result_df], axis=0, ignore_index=True)
 
 	# 保存先のディレクトリを作成し，保存
-	output_dir = os.path.join(os.path.dirname(__file__), "training_data", "new")
+	output_dir = os.path.join(os.path.dirname(__file__), "training_data", "new", f"×{args.ratio}")
 	os.system(f"mkdir -p {output_dir}")
 	output_path = os.path.join(output_dir, f"{args.cell_line}_train.csv")
 	new_trainingData_df.to_csv(output_path, index=False)
 
 
 def make_new_trainingData(args):
-	download_trainingData(args)
-	extract_positive_pairs(args)
-	make_bipartiteGraph(args)
-	maximumFlow(args)
+	# download_trainingData(args)
+	# extract_positive_pairs(args)
+	# make_bipartiteGraph(args)
+	# maximumFlow(args)
 	assemble_new_trainingData(args)
 
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="TargetFinderの正例トレーニングデータから新たにトレーニングデータを作成する")
 	parser.add_argument("--targetfinder_root", help="enhancer,promoterデータをダウンロードする際のtargetfinderのルートurl", default="https://github.com/shwhalen/targetfinder/raw/master/paper/targetfinder/")
+	parser.add_argument("--ep2vec_root", help="ep2vecのgitのurl", default="https://raw.githubusercontent.com/wanwenzeng/ep2vec/master")
 	parser.add_argument("--cell_line", help="細胞株", default="K562")
+
+	parser.add_argument("--ratio", type=int, help="正例に対し何倍の負例を作るか", default="1")
 	args = parser.parse_args()
 
 	cell_line_list = ["GM12878", "HeLa-S3", "HUVEC", "IMR90", "K562", "NHEK"]
+	ratio_list = [1, 2, 3, 4, 5]
 	for cell_line in cell_line_list:
-		args.cell_line = cell_line
-		make_new_trainingData(args)
+		for ratio in ratio_list:
+			args.ratio = ratio
+			args.cell_line = cell_line
+			make_new_trainingData(args)
+			# download_trainingData(args)
 
 
