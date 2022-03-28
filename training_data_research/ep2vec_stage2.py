@@ -32,6 +32,8 @@ def classifier_preprocess(args, d2v):
 	paragraphTag_list = list(d2v.dv.index_to_key)
 
 	train_path = os.path.join(os.path.dirname(__file__), "training_data", args.dataset, f"{args.cell_line}_train.csv")
+	if args.dataset == "new":
+		train_path = os.path.join(os.path.dirname(__file__), "training_data", args.dataset, f"×{args.ratio}", f"{args.cell_line}_train.csv")
 	train_df = pd.read_csv(train_path)
 	for _, row_data in train_df.iterrows():
 		enhName = row_data["enhancer_name"]
@@ -201,6 +203,7 @@ def ep2vec_stage2_v2(args):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="TargetFinderの正例トレーニングデータから新たにトレーニングデータを作成する")
 	parser.add_argument("--dataset", help="どのデータセットを使うか", default="TargetFinder")
+	parser.add_argument("--ratio", default=1)
 	parser.add_argument("--cell_line", help="細胞株", default="K562")
 	parser.add_argument("--k", help="k-merのk", type=int, default=6)
 	parser.add_argument("--k_list", help="k-merのk", default="1,2,3,4,5,6")
