@@ -73,9 +73,14 @@ def get_weights(args, y):
 		1: 1 / (np.sum(y==1) / len(y))
 	}
 
-	w_df = pd.DataFrame(np.zeros(len(df), 1), columns=["weight"]) 
-	w_df.loc[np.sum(y==0), "weight"] = weights[0]
-	w_df.loc[np.sum(y==1), "weight"] = weights[1]
+	w_df = pd.DataFrame(np.zeros((len(y), 1)), columns=["weight"]) 
+
+	for i in range(len(y)):
+		w_df.loc[i, "weight"] = weights[y[i]]
+	# w_df.loc[y["label"]==0, "weight"] = weights[0]
+	# w_df.loc[y["label"]==1, "weight"] = weights[1]
+
+	# print(np.sum(y==1))
 
 	return w_df["weight"].values
 
@@ -203,7 +208,7 @@ def ep2vec_stage2_v2(args):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="TargetFinderの正例トレーニングデータから新たにトレーニングデータを作成する")
 	parser.add_argument("--dataset", help="どのデータセットを使うか", default="TargetFinder")
-	parser.add_argument("--ratio", default=1)
+	parser.add_argument("--ratio", default=5)
 	parser.add_argument("--cell_line", help="細胞株", default="K562")
 	parser.add_argument("--k", help="k-merのk", type=int, default=6)
 	parser.add_argument("--k_list", help="k-merのk", default="1,2,3,4,5,6")
@@ -226,7 +231,8 @@ if __name__ == '__main__':
 	args.classifier = "GBRT"
 	args.gbrt_tree_cnt = 4000
 	args.way_of_cv = "chromosomal"
-	k_mer_set = ["1", "2", "3", "4", "5", "6", "1,2,3,4,5,6", "1,2", "2,3", "3,4", "4,5", "5,6", "1,2,3", "2,3,4", "3,4,5", "4,5,6"]
+	# k_mer_set = ["1", "2", "3", "4", "5", "6", "1,2,3,4,5,6", "1,2", "2,3", "3,4", "4,5", "5,6", "1,2,3", "2,3,4", "3,4,5", "4,5,6"]
+	k_mer_set = ["6"]
 	args.stride = 1
 	for cl in cell_line_list:
 		for k_list in k_mer_set:
