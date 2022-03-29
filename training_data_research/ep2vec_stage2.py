@@ -235,11 +235,13 @@ if __name__ == '__main__':
 	k_mer_set = ["6"]
 	args.stride = 1
 	for cl in cell_line_list:
-		for k_list in k_mer_set:
-			args.cell_line = cl
-			args.k_list = k_list
-			args.output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_result", args.dataset, args.cell_line, args.way_of_cv, f"{args.k_list}_{args.stride}",f"{args.classifier}_{args.gbrt_tree_cnt}")
-			ep2vec_stage2_v2(args)
+		for ratio in [1, 2, 3, 4, 5]:
+			for k_list in k_mer_set:
+				args.cell_line = cl
+				args.ratio = ratio
+				args.k_list = k_list
+				args.output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_result", args.dataset, args.cell_line, args.way_of_cv, f"×{args.ratio}", f"{args.k_list}_{args.stride}",f"{args.classifier}_{args.gbrt_tree_cnt}")
+				ep2vec_stage2_v2(args)
 
 	# for dataset in dataset_list:
 	# 	for cl in cell_line_list:
