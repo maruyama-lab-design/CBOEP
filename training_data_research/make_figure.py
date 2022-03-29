@@ -112,6 +112,13 @@ def get_F1_Dict(datasetNames, cell_line, classifiers):
 			result_dict[datasetName]["random"][classifier] = get_averageF1_in_allFold(resultDir)
 	return result_dict
 
+def get_F1_Dict_v2(datasetName, cell_line, classifier, k_mer_set_list):
+	result_dict = {}
+	for k_mer_set in k_mer_set_list:
+		resultDir = os.path.join(os.path.dirname(__file__), "ep2vec_result", datasetName, cell_line, "chromosomal", f"{k_mer_set}_1", classifier)
+		result_dict[k_mer_set] = get_averageF1_in_allFold(resultDir)
+	return result_dict
+
 
 def make_F1_barGraph_by_each_Classifier(datasetNames, cell_line, classifiers):
 	result_dict = get_F1_Dict(datasetNames, cell_line, classifiers)
@@ -135,6 +142,19 @@ def make_F1_barGraph_by_each_Classifier(datasetNames, cell_line, classifiers):
 		plt.legend()
 		plt.savefig(f"{dataset}_{args.cell_line}_F1.png",dpi=130,bbox_inches = 'tight', pad_inches = 0)
 		plt.show()
+
+
+def make_F1_barGraph_by_k_mer_set(datasetName, cell_line, classifier, k_mer_set_list):
+	result_dict = get_F1_Dict_v2(datasetName, cell_line, classifier, k_mer_set_list)
+	labels = result_dict.keys()
+	left = list(range(1, len(labels)+1))
+	height = [result_dict[key] for key in labels]  # 点数
+	
+	plt.bar(left, height, width=0.5, color='red',
+			edgecolor='b', linewidth=2, tick_label=labels)
+	plt.ylabel('F-measure')
+	plt.xlabel('k-mer set')
+	plt.show()
 
 
 def make_F1_barGraph(datasetNames, cell_line, classifiers):
@@ -263,13 +283,15 @@ if __name__ == '__main__':
 	research_list = ["new"]
 	ratio_list = [1, 2, 3, 4, 5]
 
-	for researchName in research_list:
-		for cell_line in cell_line_list:
-			for ratio in ratio_list:
-				args.ratio = ratio
-				args.research_name = researchName
-				args.cell_line = cell_line
-				make_PosNeg_figure(args)
+	make_F1_barGraph_by_k_mer_set("new", "K562", "GBRT_4000", ["1", "2", "3", "4", "5", "6", "1,2", "2,3", "3,4", "4,5", "5,6", "1,2,3", "2,3,4", "3,4,5", "4,5,6", "1,2,3,4,5,6"])
+
+	# for researchName in research_list:
+	# 	for cell_line in cell_line_list:
+	# 		for ratio in ratio_list:
+	# 			args.ratio = ratio
+	# 			args.research_name = researchName
+	# 			args.cell_line = cell_line
+	# 			make_PosNeg_figure(args)
 
 	# for cell_line in cell_line_list:
 	# 	make_F1_barGraph(["TargetFinder", "ep2vec", "new"], cell_line, ["GBRT_100", "GBRT_1000", "GBRT_4000", "KNN_5", "KNN_10", "KNN_15"])
