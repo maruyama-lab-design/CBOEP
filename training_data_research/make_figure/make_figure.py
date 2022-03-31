@@ -10,6 +10,11 @@ import argparse
 import math
 
 
+def add_value_label(x_list,y_list):
+    for i in range(1, len(x_list)+1):
+        plt.text(i,y_list[i-1],y_list[i-1])
+
+
 def set_fontsize(axis_Max):
 	x1, y1, x2, y2 = 100, 8, 625, 3
 	a = (y2 - y1) / (x2 - x1)
@@ -115,7 +120,7 @@ def get_F1_Dict(datasetNames, cell_line, classifiers):
 def get_F1_Dict_v2(datasetName, cell_line, classifier, k_mer_set_list):
 	result_dict = {}
 	for k_mer_set in k_mer_set_list:
-		resultDir = os.path.join(os.path.dirname(__file__), "ep2vec_result", datasetName, cell_line, "chromosomal", f"{k_mer_set}_1", classifier)
+		resultDir = os.path.join(os.path.dirname(__file__), "ep2vec_result", datasetName, cell_line, "chromosomal", f"×1", f"{k_mer_set}_1", classifier)
 		result_dict[k_mer_set] = get_averageF1_in_allFold(resultDir)
 	return result_dict
 
@@ -146,14 +151,24 @@ def make_F1_barGraph_by_each_Classifier(datasetNames, cell_line, classifiers):
 
 def make_F1_barGraph_by_k_mer_set(datasetName, cell_line, classifier, k_mer_set_list):
 	result_dict = get_F1_Dict_v2(datasetName, cell_line, classifier, k_mer_set_list)
-	labels = result_dict.keys()
+	labels = list(result_dict.keys())
 	left = list(range(1, len(labels)+1))
-	height = [result_dict[key] for key in labels]  # 点数
+	height = [result_dict[key]["mean"] for key in labels]
+	values = [round(v, 3) for v in height]
+
+	fig, ax = plt.subplots()
+	ax.set_ylim([0, 1])
 	
-	plt.bar(left, height, width=0.5, color='red',
-			edgecolor='b', linewidth=2, tick_label=labels)
+	plt.bar(left, height, width=0.2, color='red',
+			edgecolor='b', tick_label=labels)
+	add_value_label(left,values)
 	plt.ylabel('F-measure')
 	plt.xlabel('k-mer set')
+	plt.xticks(rotation=45)
+	plt.tick_params(labelsize=8)
+	plt.savefig(f"{cell_line}_test.png",dpi=130,bbox_inches = 'tight', pad_inches = 0)
+	fig.set_figheight(8)
+	fig.set_figwidth(12)
 	plt.show()
 
 
@@ -283,7 +298,7 @@ if __name__ == '__main__':
 	research_list = ["new"]
 	ratio_list = [1, 2, 3, 4, 5]
 
-	make_F1_barGraph_by_k_mer_set("new", "K562", "GBRT_4000", ["1", "2", "3", "4", "5", "6", "1,2", "2,3", "3,4", "4,5", "5,6", "1,2,3", "2,3,4", "3,4,5", "4,5,6", "1,2,3,4,5,6"])
+	make_F1_barGraph_by_k_mer_set("new", "GM12878", "GBRT_4000", ["1", "2", "3", "4", "5", "6", "7", "8", "1,2", "2,3", "3,4", "4,5", "5,6", "1,2,3", "2,3,4", "3,4,5", "4,5,6", "1,2,3,4,5,6", "1,2,3,4,5,6,7,8"])
 
 	# for researchName in research_list:
 	# 	for cell_line in cell_line_list:
