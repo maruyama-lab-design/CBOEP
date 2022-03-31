@@ -41,7 +41,7 @@ def get_averageF1_in_allFold(resultDir_path):
 def get_F1_Dict(datasetName, cell_line, classifier, k_mer_set_list):
 	result_dict = {}
 	for k_mer_set in k_mer_set_list:
-		resultDir = os.path.join(os.path.dirname(__file__), "ep2vec_result", datasetName, cell_line, "chromosomal", f"×1", f"{k_mer_set}_1", classifier)
+		resultDir = os.path.join(os.path.dirname(__file__), ".", "ep2vec_result", datasetName, cell_line, "chromosomal", f"×1", f"{k_mer_set}_1", classifier)
 		result_dict[k_mer_set] = get_averageF1_in_allFold(resultDir)
 	
 	return result_dict
