@@ -23,7 +23,7 @@ def getF1(y_true, y_prob, threshold=0.5):
 
 def get_averageF1_in_allFold(resultDir_path):
 	files = os.listdir(resultDir_path)
-	print(f"{files} の F-measure を計算")
+	print(f"{resultDir_path} の F-measure を計算")
 	files_file = [f for f in files if os.path.isfile(os.path.join(resultDir_path, f))]
 	# print(files_file)   # ['file1', 'file2.txt', 'file3.jpg']
 	F1_score = np.zeros(len(files_file))
@@ -41,7 +41,7 @@ def get_averageF1_in_allFold(resultDir_path):
 def get_F1_Dict(datasetName, cell_line, classifier, ratio_list):
 	result_dict = {}
 	for ratio in ratio_list:
-		resultDir = os.path.join(os.path.dirname(__file__), ".", "ep2vec_result", datasetName, cell_line, "chromosomal", f"×{ratio}", f"6_1", classifier)
+		resultDir = os.path.join(os.path.dirname(__file__), "..", "ep2vec_result", datasetName, cell_line, "chromosomal", f"×{ratio}", f"6_1", classifier)
 		result_dict[ratio] = get_averageF1_in_allFold(resultDir)
 	
 	return result_dict
@@ -64,6 +64,7 @@ def make_F1_barGraph_by_ratio(datasetName, cell_line, classifier, ratio_list):
 	plt.xlabel('ratio')
 	plt.xticks(rotation=45)
 	plt.tick_params(labelsize=8)
+	plt.title(f"{cell_line}_by_ratio.png")
 	plt.savefig(f"{cell_line}_by_ratio.png",dpi=130,bbox_inches = 'tight', pad_inches = 0)
 	fig.set_figheight(8)
 	fig.set_figwidth(15)

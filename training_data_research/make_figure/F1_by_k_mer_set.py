@@ -23,7 +23,7 @@ def getF1(y_true, y_prob, threshold=0.5):
 
 def get_averageF1_in_allFold(resultDir_path):
 	files = os.listdir(resultDir_path)
-	print(f"{files} の F-measure を計算")
+	print(f"{resultDir_path} の F-measure を計算")
 	files_file = [f for f in files if os.path.isfile(os.path.join(resultDir_path, f))]
 	# print(files_file)   # ['file1', 'file2.txt', 'file3.jpg']
 	F1_score = np.zeros(len(files_file))
@@ -41,7 +41,7 @@ def get_averageF1_in_allFold(resultDir_path):
 def get_F1_Dict(datasetName, cell_line, classifier, k_mer_set_list):
 	result_dict = {}
 	for k_mer_set in k_mer_set_list:
-		resultDir = os.path.join(os.path.dirname(__file__), ".", "ep2vec_result", datasetName, cell_line, "chromosomal", f"×1", f"{k_mer_set}_1", classifier)
+		resultDir = os.path.join(os.path.dirname(__file__), "..", "ep2vec_result", datasetName, cell_line, "chromosomal", f"×1", f"{k_mer_set}_1", classifier)
 		result_dict[k_mer_set] = get_averageF1_in_allFold(resultDir)
 	
 	return result_dict
