@@ -61,6 +61,7 @@ def make_bipartiteGraph(args):
 
 		enhDict = {}
 		prmDict = {}
+
 		# 正例辺を列挙し，dictに保持しておく
 		for _, pair_data in sub_df.iterrows():
 			enhName = pair_data["enhancer_name"]
@@ -82,6 +83,7 @@ def make_bipartiteGraph(args):
 			G_from.append("source")
 			G_to.append(enhName)
 			G_cap.append(cap)
+
 		# 各プロモーター => sinkの容量は，各プロモーターの正例辺の次数
 		for prmName in prmDict.keys():
 			cap = len(prmDict[prmName]) * args.ratio
@@ -90,8 +92,8 @@ def make_bipartiteGraph(args):
 			G_cap.append(cap)
 
 		# 正例辺が貼られていない部分全てに容量1の負例辺を貼る
-		enhList = sub_df["enhancer_name"].tolist()
-		prmList = sub_df["promoter_name"].tolist()
+		enhList = set(sub_df["enhancer_name"].tolist())
+		prmList = set(sub_df["promoter_name"].tolist())
 		for enhName in enhList:
 			for prmName in prmList:
 				if enhDict[enhName].get(prmName) == None:
@@ -107,6 +109,8 @@ def make_bipartiteGraph(args):
 			},
 			index=None
 		)
+
+		assert bipartiteGraph.duplicated().sum() == 0
 
 		output_dir = os.path.join(os.path.dirname(__file__), "bipartiteGraph", f"×{args.ratio}", args.cell_line, chrom)
 		os.system(f"mkdir -p {output_dir}")
@@ -159,6 +163,8 @@ def maximumFlow(args):
 		# 'Var'変数の結果の値をまとめて'Val'列にコピーしている
 		df['Val'] = df.Var.apply(pulp.value)
 
+		assert df.duplicated().sum() == 0
+
 		output_path = os.path.join(os.path.dirname(__file__), "bipartiteGraph", f"×{args.ratio}", args.cell_line, chrom, "maxFlow_result.csv")
 		df.to_csv(output_path, index=False)
 
@@ -195,6 +201,8 @@ def assemble_new_trainingData(args):
 	# 正例と負例をconcat
 	new_trainingData_df = pd.concat([positive_only_df, maximumFlow_result_df], axis=0, ignore_index=True)
 
+	assert new_trainingData_df.duplicated().sum() == 0
+
 	# 保存先のディレクトリを作成し，保存
 	output_dir = os.path.join(os.path.dirname(__file__), "training_data", "new", f"×{args.ratio}")
 	os.system(f"mkdir -p {output_dir}")
@@ -204,9 +212,9 @@ def assemble_new_trainingData(args):
 
 def make_new_trainingData(args):
 	# download_trainingData(args)
-	# extract_positive_pairs(args)
-	# make_bipartiteGraph(args)
-	# maximumFlow(args)
+	extract_positive_pairs(args)
+	make_bipartiteGraph(args)
+	maximumFlow(args)
 	assemble_new_trainingData(args)
 
 
