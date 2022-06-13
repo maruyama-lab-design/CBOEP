@@ -18,9 +18,10 @@ def get_classifier(args):
 	if args.classifier == "GBRT":
 		return GradientBoostingClassifier(n_estimators = 4000, learning_rate = 0.001, max_depth = 25, max_features = 'log2', random_state = 0)
 	elif args.classifier == "KNN":
-		return KNeighborsClassifier(n_neighbors=args.knn_neighbor_cnt) # k近傍法
+		return KNeighborsClassifier(n_neighbors=7) # k近傍法
 	elif args.classifier == "SVM":
-		return svm.SVC(kernel='linear', random_state=None, probability=True)
+		#TODO
+		return svm.SVC(kernel='rbf', random_state=None, probability=True)
 
 
 def get_chr2dataset(args):
@@ -34,7 +35,7 @@ def get_chr2dataset(args):
 		},
 	}
 
-	d2v = Doc2Vec.load(os.path.join(args.d2v_dir, args.cell_line, f"{args.k_stride_set}.d2v"))
+	d2v = Doc2Vec.load(os.path.join(args.d2v_dir, args.cell_line, str(args.embedding_vector_dimention), f"{args.k_stride_set}.d2v"))
 
 	paragraphTag_list = list(d2v.dv.index_to_key)
 
@@ -61,8 +62,14 @@ def get_chr2dataset(args):
 		assert len(enhVec) == args.embedding_vector_dimention
 		assert len(prmVec) == args.embedding_vector_dimention
 
-		concatVec = enhVec + prmVec
-		assert len(concatVec) == args.embedding_vector_dimention * 2
+		# concatVec = enhVec + prmVec
+		# assert len(concatVec) == args.embedding_vector_dimention * 2
+
+		concatVec = [0] * args.embedding_vector_dimention
+		for i, (v_e, v_p) in enumerate(zip(enhVec, prmVec)):
+			concatVec[i] = v_e + v_p
+		assert len(concatVec) == args.embedding_vector_dimention
+
 		chr2dataset[chromosome]["X"].append(concatVec)
 
 		label = int(row_data["label"])
@@ -122,7 +129,8 @@ def chromosomal_cv(args):
 
 		classifier = get_classifier(args)
 		weights = get_weights(Y_train)
-		classifier.fit(X_train, Y_train, sample_weight=weights) # 学習
+		# classifier.fit(X_train, Y_train, sample_weight=weights) # 学習
+		classifier.fit(X_train, Y_train)
 
 		print(f"5/{len(X_test)} of x_test")
 		for i in range(5):

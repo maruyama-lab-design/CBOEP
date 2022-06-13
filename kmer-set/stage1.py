@@ -54,12 +54,12 @@ def train_doc2vecModel(args, tagged_sentence_iterator):
 	model = Doc2Vec(
 		tagged_sentence_iterator,
 		min_count=1,
-		window=args.window,
-		vector_size=args.embedding_vector_dimention,
+		window=args.window, # 10
+		vector_size=args.embedding_vector_dimention, # 100
 		sample=1e-4,
 		negative=5,
 		workers=8,
-		epochs=args.epochs
+		epochs=args.epochs # 10
 	)
 	return model
 			
@@ -76,7 +76,7 @@ def stage1(args):
 		k, stride = int(k), int(stride)
 		input_path_list.append(os.path.join(input_dir, f"{k}_{stride}_concatenated.sent"))
 
-	d2v_dir = os.path.join(args.d2v_dir, args.cell_line)
+	d2v_dir = os.path.join(args.d2v_dir, args.cell_line, str(args.embedding_vector_dimention))
 	os.system(f"mkdir -p {d2v_dir}")
 
 	d2v_path = os.path.join(d2v_dir, f"{args.k_stride_set}.d2v") # 保存先
