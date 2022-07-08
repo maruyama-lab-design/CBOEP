@@ -17,8 +17,8 @@ def unzip_gzfile(gzfile, output_path):
 			fout.write(fin.read())
 
 
-def download_referenceGenome():
-	output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_preprocess")
+def download_referenceGenome(args):
+	output_dir = args.seq_dir
 	os.system(f"mkdir -p {output_dir}")
 
 	output_gz_path = os.path.join(output_dir, "hg19.fa.gz")
@@ -36,7 +36,7 @@ def download_referenceGenome():
 
 
 def download_bedfile(args):
-	output_dir = os.path.join(os.path.dirname(__file__), "ep2vec_preprocess", args.cell_line)
+	output_dir = os.path.join(args.seq_dir, args.cell_line)
 	os.system(f"mkdir -p {output_dir}")
 	
 	for regionType in ["enhancer", "promoter"]:
@@ -45,7 +45,8 @@ def download_bedfile(args):
 			continue
 		
 		print(f"download {args.cell_line} {regionType} bed...")
-		url = os.path.join(args.targetfinder_root, args.cell_line, "output-ep", f"{regionType}s.bed")
+		targetfinder_root = "https://github.com/shwhalen/targetfinder/raw/master/paper/targetfinder/"
+		url = os.path.join(targetfinder_root, args.cell_line, "output-ep", f"{regionType}s.bed")
 		urllib.request.urlretrieve(url, output_path)
 		print("downloaded")
 
@@ -65,7 +66,7 @@ def make_fastafile(args):
 
 		print(f"{args.cell_line} {regionType} make fasta...")
 		bed = pybedtools.BedTool(input_bed_path)
-		seq = bed.sequence(fi=input_referenceGenome_path, nameOnly=True) # ここで切り出しているらしい
+		seq = bed.sequence(fi=input_referenceGenome_path, name=True) # ここで切り出しているらしい
 		# tmpfileに書き込み（reverse comlement無し）
 		with open(seq_path, "w") as fout:
 			fout.write(open(seq.seqfn).read())
@@ -152,9 +153,9 @@ def concat_EnhPrm_sentfile(args):
 
 
 def preprocess(args):
-	# download_referenceGenome()
-	# download_bedfile(args)
-	# make_fastafile(args)
+	download_referenceGenome(args)
+	download_bedfile(args)
+	make_fastafile(args)
 
 	make_sentencefile(args)
 	concat_EnhPrm_sentfile(args)

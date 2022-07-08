@@ -12,4 +12,5 @@ memo*
 *.gz
 *d2v
 ep2vec_result
+*/result/*
 
