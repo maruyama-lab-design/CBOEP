@@ -7,10 +7,13 @@ memo*
 *.png
 *.csv
 *.fa
+*.fai
 *.bed
 *.sent
 *.gz
+*.txt
 *d2v
 ep2vec_result
 */result/*
+*.narrowPeak
 
