@@ -4,7 +4,8 @@ memo*
 /*.json
 !TransEPI/*.json
 *.pyc
-*.png
+/*.png
+!TransEPI/*.png
 *.csv
 *.fa
 *.fai
