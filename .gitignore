@@ -1,7 +1,8 @@
 .vscode/*
 test
 memo*
-*.json
+/*.json
+!TransEPI/*.json
 *.pyc
 *.png
 *.csv
