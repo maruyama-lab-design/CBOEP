@@ -54,7 +54,7 @@ The predictions will be available at `output.prediction.txt`
 # Step-by-step guide
 
 ## Prepare genomic data 
-*For cell types not included in [Synapse:syn26156164](https://www.synapse.org/#!Synapse:syn26156164)*
+*For cell types not included in [Synapse:syn26156164](https://www.synapse.org/#!Synapse:syn26156164)* **<- 取り入れてdata/genomic_feature下に置く**
 1. Download the genomic data required by TransEPI from [ENCODE](https://www.encodeproject.org/) or [Roadmap](https://egg2.wustl.edu/roadmap/web_portal/processed_data.html#ChipSeq_DNaseSeq)  
     - CTCF ChIP-seq data in narrowPeak format
     - DNase-seq data in bigWig format
