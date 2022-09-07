@@ -35,10 +35,10 @@ git clone git@github.com:biomed-AI/TransEPI.git
 
 2. Download processed genomic features
 
-- Download the genomic features from [Synapse:syn26156164](https://www.synapse.org/#!Synapse:syn26156164) 
+- Download the genomic features from [Synapse:syn26156164](https://www.synapse.org/#!Synapse:syn26156164) <span style="color: red; ">重要！！　取り入れたデータはdata/genomic_feature以下に置いてください。</span>
 - Edit the feature configuration file `./data/genomic_data/CTCF_DNase_6histone.500.json` to specifiy the locations of the genomic feature files downloaded from Synapse. *Absolute path is required!*  
 
-3. Run the model
+3. Run the model これはテスト用です。学習ではありません。
 ```
 cd TransEPI/src
 python ./evaluate_model.py \
@@ -75,7 +75,7 @@ bash ./pipeline.sh
 
 ## Prepare the configuration file for model training
 
-The configuration file should be in `.json` format:
+The configuration file should be in `.json` format: <span style="color: red; ">サンプルをconfig_dataset内に置いている<\span>
 ```
 {
     "data_opts": {	// dataset configuration
@@ -149,7 +149,7 @@ The input file should be `tab` separated and the fields are:
 - cross validation  
 ```
 python cross_validate.py \
-	-c config.json \  # the json file prepared in "Preparing the configuration file for training model"
+	-c config.json \  # the json file prepared in "Preparing the configuration file for training model" <span style="color: red; ">サンプルをconfig_dataset内に置いている<\span>
 	--gpu 0 		  # GPU ID, set it to -1 to use CPU
 	-o outdir 		  # output directory
 ```
