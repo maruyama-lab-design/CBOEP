@@ -32,6 +32,6 @@
         "num_epoch": 50,
         "patience": 100,
         "num_workers": 8,
-        "use_scheduler": false
+        "use_scheduler": true
     }
 }

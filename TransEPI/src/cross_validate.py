@@ -155,8 +155,16 @@ def train_transformer_model(
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step() # 重みの更新 validation は使っていない
-                if use_scheduler:
-                    scheduler.step()
+
+                # if use_scheduler: # learning rateの更新（batch毎）
+                #     with open(os.path.join(outdir, "learning_rate.txt"), "a") as f:
+                #         print('epoch:{}, lr:{}'.format(epoch_idx, scheduler.get_last_lr()[0]), file=f)  
+                #     scheduler.step()
+            
+            if use_scheduler: # learning rateの更新（epoch毎）
+                with open(os.path.join(outdir, "learning_rate.txt"), "a") as f:
+                        print('epoch:{}, lr:{}'.format(epoch_idx, scheduler.get_last_lr()[0]), file=f)  
+                scheduler.step()
 
             torch.save({
                 "model_state_dict": model.state_dict(),
@@ -164,16 +172,16 @@ def train_transformer_model(
                 "scheduler_state_dict": scheduler.state_dict()
                 }, checkpoint)
 
-            # ___以下追加___
+            # ___以下追加（全てのepochsを保存）___
             torch.save({
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "scheduler_state_dict": scheduler.state_dict()
-                }, f"{outdir}\\fold0.epoch{epoch_idx}.pt")
+                }, f"{outdir}\\fold{fold_idx}.epoch{epoch_idx}.pt")
             # ______
 
             model.eval()
-            train_loss, val_loss = None, None
+            train_loss, valid_loss = None, None
             train_pred, train_true, train_pred_dist, train_true_dist = predict(model, sample_loader)
             tra_AUC, tra_AUPR, tra_F1, tra_pre, tra_rec, tra_MCC = misc_utils.evaluator(train_true, train_pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
             valid_pred, valid_true, valid_pred_dist, valid_true_dist = predict(model, valid_loader)
