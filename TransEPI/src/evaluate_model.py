@@ -142,10 +142,10 @@ if __name__ == "__main__":
             header="##command: {}\n#true\tpred\tchrom\tenh_name\tprom_name".format(' '.join(sys.argv))
         )
 
-    AUC, AUPR, F1, pre, rec, MCC = misc_utils.evaluator(true, pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
+    AUC, AUPR, F1, balanced_acc, pre, rec, MCC = misc_utils.evaluator(true, pred, out_keys=["AUC", "AUPR", "F1", "balanced_accuracy", "precision", "recall", "MCC"])
     result_file = f"{args.prefix}.prediction_metrix.txt"
     with open(result_file, "a") as f:
-        print(f"AUC:{AUC:.4f}, AUPR:{AUPR:.4f}, F1:{F1:.4f}, pre:{pre:.4f}, rec:{rec:.4f}, MCC:{MCC:.4f}", file=f)
+        print(f"AUC:{AUC:.4f}, AUPR:{AUPR:.4f}, F1:{F1:.4f}, balanced accuracy:{balanced_acc:.4f}, pre:{pre:.4f}, rec:{rec:.4f}, MCC:{MCC:.4f}", file=f)
 
     label_counts = misc_utils.count_unique_itmes(labels)
     print("## datasets: {}".format(config["data_opts"]["datasets"]))

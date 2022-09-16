@@ -2,11 +2,16 @@ from cProfile import label
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import glob
+import os
 
-dirlist = ["BENGI", "maxflow", "BENGI_noMSE", "maxflow_noMSE"]
+dirlist = glob.glob("D:\\ylwrv\\\Koga_code\\TransEPI\\output\\*")
+# dirlist = ["BENGI", "maxflow", "BENGI_noMSE", "maxflow_noMSE"]
 
 for dirname in dirlist:
-    loss_df = pd.read_csv(f"{dirname}/loss.csv")
+    if not os.path.exists(f"{dirname}//loss.csv"):
+        continue
+    loss_df = pd.read_csv(f"{dirname}//loss.csv")
 
     loss_df["epochs"] = loss_df["epochs"].astype(int)
     x_data = loss_df["epochs"].tolist()
@@ -17,6 +22,6 @@ for dirname in dirlist:
 
     plt.ylim((0, 1))
     plt.plot(x_data, y_data1, label="train loss")
-    plt.plot(x_data, y_data2, label="valid loss")
+    plt.plot(x_data, y_data2, label="test loss")
     plt.legend()
     fig.savefig(f"{dirname}/loss.png")

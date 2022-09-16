@@ -27,11 +27,11 @@
     },
 
     "train_opts": {
-        "learning_rate": 0.001,
+        "learning_rate": 0.01,
         "batch_size": 64,
         "num_epoch": 20,
         "patience": 100,
         "num_workers": 8,
-        "use_scheduler": false
+        "use_scheduler": true
     }
 }

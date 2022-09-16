@@ -11,6 +11,8 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.utils.data import DataLoader, Subset
 
+import matplotlib.pyplot as plt
+
 import epi_models
 import epi_dataset
 import misc_utils
@@ -91,6 +93,7 @@ def train_transformer_model(
     # valid_result_dict = {"epochs": list(), "loss": list(), "AUC": list(), "AUPR": list(), "F1": list(), "precision": list(), "recall": list(), "MCC": list()}
 
     loss_dict = {"epochs": [], "fold": [], "train_loss": [], "valid_loss": []}
+    lrs = []
     for epoch_idx in range(num_epoch):
         # epoch_results["AUC"].append([0 for _ in range(n_folds)])
         # epoch_results["AUPR"].append([0 for _ in range(n_folds)])
@@ -160,11 +163,16 @@ def train_transformer_model(
                 #     with open(os.path.join(outdir, "learning_rate.txt"), "a") as f:
                 #         print('epoch:{}, lr:{}'.format(epoch_idx, scheduler.get_last_lr()[0]), file=f)  
                 #     scheduler.step()
-            
-            if use_scheduler: # learning rateの更新（epoch毎）
-                with open(os.path.join(outdir, "learning_rate.txt"), "a") as f:
-                        print('epoch:{}, lr:{}'.format(epoch_idx, scheduler.get_last_lr()[0]), file=f)  
+
+
+            lrs.append(optimizer.param_groups[0]["lr"])
+            if use_scheduler:
                 scheduler.step()
+
+            # with open(os.path.join(outdir, "learning_rate.txt"), "a") as f:
+            #     print('epoch:{}, lr:{}'.format(epoch_idx, scheduler.get_last_lr()[0]), file=f)  
+            # if use_scheduler: # learning rateの更新（epoch毎）
+            #     scheduler.step()
 
             torch.save({
                 "model_state_dict": model.state_dict(),
@@ -220,6 +228,7 @@ def train_transformer_model(
         print("Epoch{:03d}(AUC/AUPR):\t{:.4f}({:.4f})\t{:.4f}({:.4f})".format(epoch_idx, auc_mean, auc_std, aupr_mean, aupr_std))
 
 
+
         # 良いepochを保存 (上回らないと保存されない)
         if auc_mean >= best_val_auc and aupr_mean >= best_val_aupr:
             wait = 0
@@ -246,6 +255,11 @@ def train_transformer_model(
     loss_df = pd.DataFrame.from_dict(loss_dict, orient='index').T
     loss_df.to_csv(os.path.join(outdir, "loss.csv"), index=False)
 
+    plt.figure()
+    plt.plot(lrs)
+    plt.xlabel("epochs")
+    plt.ylabel("learning rate")
+    plt.savefig(os.path.join(outdir, "learning_rate.png"))
 
 def get_args():
     p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)

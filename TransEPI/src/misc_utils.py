@@ -72,6 +72,7 @@ def evaluator(y_true, y_prob, out_keys: list=None, **kwargs):
     results["precision"] = metrics.precision_score(y_true, y_prob.round().astype(int))
     results["recall"] = metrics.recall_score(y_true, y_prob.round().astype(int))
     results["MCC"] = metrics.matthews_corrcoef(y_true, y_prob.round().astype(int))
+    results["balanced_accuracy"] = metrics.balanced_accuracy_score(y_true, y_prob.round().astype(int))
     # ___
 
     if out_keys is not None:
