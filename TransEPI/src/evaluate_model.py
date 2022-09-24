@@ -74,7 +74,7 @@ if __name__ == "__main__":
     #np.random.seed(args.seed)
 
     # change test chrom...
-    args.test_chroms = ["chr1", "chr10", "chr15", "chr21"]
+    args.test_chroms = ["chr19", "chr20", "chr21", "chr22", "chrX"]
 
     if not torch.cuda.is_available():
         warnings.warn("GPU is not available")

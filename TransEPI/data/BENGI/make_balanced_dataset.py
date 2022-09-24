@@ -37,9 +37,13 @@ def make_balanced_dataset(data_dir, out_dir):
 
 
         diff = neg_cnt - pos_cnt
+        diff = 999999999
+
+        neg_only_enh = list(neg_only_enh.keys())
         neg_only_prm = list(neg_only_prm.keys())
-        drop_candidate_df = df[df['prm_name'].isin(neg_only_prm)]
-        drop_index = random.sample(list(drop_candidate_df.index), min(diff, len(drop_candidate_df)))
+        drop_enh_candidate_df = df[df['enh_name'].isin(neg_only_enh)]
+        drop_prm_candidate_df = df[df['prm_name'].isin(neg_only_prm)]
+        drop_index = random.sample(set(list(drop_enh_candidate_df.index) + list(drop_prm_candidate_df.index)), min(diff, len(set(list(drop_enh_candidate_df.index) + list(drop_prm_candidate_df.index)))))
         new_df = df.drop(drop_index)
         new_pos_cnt = len(new_df[new_df["label"] == 1])
         new_neg_cnt = len(new_df[new_df["label"] == 0])
@@ -53,5 +57,6 @@ def make_balanced_dataset(data_dir, out_dir):
 
 
 data_dir = "D:\ylwrv\Koga_code\TransEPI\data\BENGI\original"
-out_dir = "D:\\ylwrv\\Koga_code\\TransEPI\\data\\BENGI\\balanced"
+out_dir = "D:\\ylwrv\\Koga_code\\TransEPI\\data\\BENGI\\constrained(all_regions_have_pos_pair)"
+os.system(f"mkdir {out_dir}")
 make_balanced_dataset(data_dir, out_dir)
