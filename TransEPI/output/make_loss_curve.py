@@ -22,6 +22,6 @@ for dirname in dirlist:
 
     plt.ylim((0, 1))
     plt.plot(x_data, y_data1, label="train loss")
-    plt.plot(x_data, y_data2, label="test loss")
+    plt.plot(x_data, y_data2, label="valid loss")
     plt.legend()
     fig.savefig(f"{dirname}/loss.png")
