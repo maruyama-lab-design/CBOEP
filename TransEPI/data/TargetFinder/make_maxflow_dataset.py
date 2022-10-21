@@ -11,7 +11,7 @@ import glob
 def extract_positive_pairs(args):
 	# data directory を この~.pyと同じ場所に作成
 	output_dir = os.path.join(os.path.dirname(__file__), "original", "positive_only")
-	os.system(f"mkdir {output_dir}")
+	os.system(f"mkdir -p {output_dir}")
 	# 保存先
 	output_path = os.path.join(output_dir, args.filename)
 	# if os.path.exists(output_path):
@@ -130,7 +130,7 @@ def make_bipartiteGraph(args):
 		assert bipartiteGraph.duplicated().sum() == 0
 
 		output_dir = os.path.join(os.path.dirname(__file__), "maxflow", "bipartiteGraph", "preprocess", chrom)
-		os.system(f"mkdir {output_dir}")
+		os.system(f"mkdir -p {output_dir}")
 		output_path = os.path.join(output_dir, args.filename)
 		bipartiteGraph.to_csv(output_path, index=False)
 
@@ -188,14 +188,14 @@ def maximumFlow(args):
 		assert df.duplicated().sum() == 0
 
 		output_dir = os.path.join(os.path.dirname(__file__), "maxflow", "bipartiteGraph", "result", chrom)
-		os.system(f"mkdir {output_dir}")
+		os.system(f"mkdir -p {output_dir}")
 		output_path = os.path.join(output_dir, args.filename)
 		df.to_csv(output_path, index=False)
 
 
 def get_range_from_name(name):
 	# name = chr6:226523-228463|GM12878|EH37E0821432
-	start, end = name.split("|")[0].split(":")[1].split("-")
+	start, end = name.split(":")[1].split("-")
 	return int(start), int(end)
 
 
@@ -246,7 +246,7 @@ def assemble_new_trainingData(args):
 
 	# 保存先のディレクトリを作成し，保存
 	output_dir = os.path.join(os.path.dirname(__file__), "maxflow")
-	os.system(f"mkdir {output_dir}")
+	os.system(f"mkdir -p {output_dir}")
 	output_path = os.path.join(output_dir, args.filename)
 	new_trainingData_df.to_csv(output_path, header=False, index=False, sep="\t")
 

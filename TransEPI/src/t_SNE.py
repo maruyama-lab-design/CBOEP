@@ -14,9 +14,6 @@ import numpy as np
 from typing import Dict, List
 
 
-import pickle
-
-
 class PositionwiseFeedForward(nn.Module):
     def __init__(self, d_in, d_hid, dropout=0.1):
         super(PositionwiseFeedForward, self).__init__()
@@ -145,8 +142,8 @@ class TransEPI(nn.Module):
             fc.append(1)
 
         # 確認
-        # print(f"check fc_list: {fc}") # [128, 64(no batch_size), 1]
-        # print(f"check cnn channels: {cnn_channels}") # [180]
+        print(f"check fc_list: {fc}") # [128, 64(no batch_size), 1]
+        print(f"check cnn channels: {cnn_channels}") # [180]
 
         self.fc = nn.ModuleList()
         self.fc.append(
@@ -172,12 +169,10 @@ class TransEPI(nn.Module):
 
 
 
-    def forward(self, feats, enh_idx, prom_idx, return_att=False, batch_idx=None, save_final_feat=False, research_name=None):
-
-
+    def forward(self, feats, enh_idx, prom_idx, return_att=False):
         # enh_idxとprm_idxを確認のため追加
-        first_enh_idx = enh_idx.clone()
-        first_prm_idx = prom_idx.clone()
+        # first_enh_idx = enh_idx.clone()
+        # first_prm_idx = prom_idx.clone()
 
 
         # feats: (B, D, S)
@@ -187,32 +182,12 @@ class TransEPI(nn.Module):
             length = None
         div = 1
 
-        # ___以下追加____
-        # B, _ = enh_idx.size()
-
-        # print("\n")      
-        # for i in range(B):
-        #     print(enh_idx[i].item(), end=" ")
-        # print("\n")
-        # for i in range(B):
-        #     print(prom_idx[i].item(), end=" ")
-        # print("\n")
-        # ______
-
         for cnn in  self.cnn:
             div *= cnn[-1].kernel_size
             enh_idx = torch.div(enh_idx, cnn[-1].kernel_size, rounding_mode="trunc")
             prom_idx = torch.div(prom_idx, cnn[-1].kernel_size, rounding_mode="trunc")
             feats = cnn(feats)
 
-        # ___以下追加____       
-        # for i in range(B):
-        #     print(enh_idx[i].item(), end=" ")
-        # print("\n")
-        # for i in range(B):
-        #     print(prom_idx[i].item(), end=" ")
-        # print("\n")
-        # ______
 
         feats = feats.transpose(1, 2) # -> (B, S, D)
         batch_size, seq_len, feat_dim = feats.size()
@@ -255,20 +230,12 @@ class TransEPI(nn.Module):
 
         # このタイミングでseq_embedがt-SNEにつかう要素となりそう
         # 確認
-        # print(f"batch_size: {batch_size}") # 64
-        # print(f"vector size before FC: {seq_embed.size()}") # (batch_size, 720)
+        print(f"batch_size: {batch_size}") # 64
+        print(f"vector size before FC: {seq_embed.size()}") # (batch_size, 720)
 
 
         for fc in self.fc:
             seq_embed = fc(seq_embed)
-
-        # TODO
-        if save_final_feat == True:
-            seq_embed_list = seq_embed.tolist()
-            dir_path = os.path.join(os.path.dirname(__file__), "..", "feat_before_sigmoid", research_name)
-            os.makedirs(dir_path, exist_ok=True)
-            with open(os.path.join(dir_path, f"feats_{batch_idx}.pkl"), mode='wb') as f:
-                pickle.dump(seq_embed_list,f)
 
         if return_att:
             return seq_embed, dists, att
@@ -281,174 +248,6 @@ class TransEPI(nn.Module):
 
 
 
-# class TransformerModule(nn.Module):
-#     def __init__(self, in_dim: int, 
-#             cnn_channels: List[int], cnn_sizes: List[int], cnn_pool: List[int],
-#             enc_layers: int, num_heads: int, d_inner: int, **kwargs):
-#         super(TransformerModule, self).__init__()
-# 
-#         self.cnn = nn.ModuleList()
-#         self.cnn.append(
-#                 nn.Sequential(
-#                     nn.Conv1d(
-#                         in_channels=in_dim, 
-#                         out_channels=cnn_channels[0], 
-#                         kernel_size=cnn_sizes[0], 
-#                         padding=cnn_sizes[0] // 2),
-#                     nn.BatchNorm1d(cnn_channels[0]),
-#                     nn.LeakyReLU(),
-#                     nn.MaxPool1d(cnn_pool[0])
-#                 )
-#             )
-#         for i in range(len(cnn_sizes) - 1):
-#             self.cnn.append(
-#                     nn.Sequential(
-#                         nn.Conv1d(
-#                             in_channels=cnn_channels[i], 
-#                             out_channels=cnn_channels[i + 1], 
-#                             kernel_size=cnn_sizes[i + 1],
-#                             padding=cnn_sizes[i + 1] // 2),
-#                         nn.BatchNorm1d(cnn_channels[i + 1]),
-#                         nn.LeakyReLU(),
-#                         nn.MaxPool1d(cnn_pool[i + 1])
-#                 )
-#             )
-# 
-#         enc_layer = nn.TransformerEncoderLayer(
-#                 d_model=cnn_channels[-1],
-#                 nhead=num_heads,
-#                 dim_feedforward=d_inner
-#             )
-#         self.encoder = nn.TransformerEncoder(
-#                 enc_layer,
-#                 num_layers=enc_layers
-#                 )
-# 
-#     def forward(self, feats):
-#         # feats: (B, D, S)
-#         for cnn in  self.cnn:
-#             feats = cnn(feats)
-#         feats = feats.transpose(1, 2)
-#         feats = self.encoder(feats)
-#         return feats
-# 
-# 
 
-
-# class EncoderLayer(nn.Module):
-#     def __init__(self, d_model, d_inner, n_head, dropout=0.1):
-#         super(EncoderLayer, self).__init__()
-#         self.slf_att = SelfAttention(dim=d_model, causal=True, heads=n_head)
-#         self.pos_ffn = PositionwiseFeedForward(d_model, d_inner, dropout)
-# 
-#     def forward(self, enc_input):
-#         enc_input = self.slf_att(enc_input)
-#         enc_input = self.pos_ffn(enc_input)
-#         return enc_input
-# 
-# 
-# class Encoder(nn.Module):
-#     def __init__(self, n_layers, n_head, d_model, d_inner, dropout=0.1):
-#         super(Encoder, self).__init__()
-#         self.dropout = nn.Dropout(p=dropout)
-#         self.layer_stack = nn.ModuleList(
-#                 [EncoderLayer(d_model, d_inner, n_head, dropout=dropout) for _ in range(n_layers)]
-#             )
-#         self.layer_norm = nn.LayerNorm(d_model, eps=1E-6)
-#         self.d_model = d_model
-# 
-#     def forward(self, seq):
-#         seq = self.dropout(seq)
-#         # seq = self.layer_norm(seq)
-#         for layer in self.layer_stack:
-#             seq = layer(seq)
-#         return seq
-
-
-# class PerformerModel(nn.Module):
-#     def __init__(self, in_dim: int, 
-#             cnn_channels: List[int], cnn_sizes: List[int], cnn_pool: List[int],
-#             enc_layers: int, num_heads: int, d_inner: int,
-#             fc: List[int], fc_dropout: float,
-#             **kwargs):
-#         super(PerformerModel, self).__init__()
-# 
-#         self.cnn = nn.ModuleList()
-#         self.cnn.append(
-#                 nn.Sequential(
-#                     nn.Conv1d(
-#                         in_channels=in_dim, 
-#                         out_channels=cnn_channels[0], 
-#                         kernel_size=cnn_sizes[0], 
-#                         padding=cnn_sizes[0] // 2),
-#                     nn.BatchNorm1d(cnn_channels[0]),
-#                     nn.LeakyReLU(),
-#                     nn.MaxPool1d(cnn_pool[0])
-#                 )
-#             )
-#         for i in range(len(cnn_sizes) - 1):
-#             self.cnn.append(
-#                     nn.Sequential(
-#                         nn.Conv1d(
-#                             in_channels=cnn_channels[i], 
-#                             out_channels=cnn_channels[i + 1], 
-#                             kernel_size=cnn_sizes[i + 1],
-#                             padding=cnn_sizes[i + 1] // 2),
-#                         nn.BatchNorm1d(cnn_channels[i + 1]),
-#                         nn.LeakyReLU(),
-#                         nn.MaxPool1d(cnn_pool[i + 1])
-#                 )
-#             )
-# 
-#         self.performer_encoder = Encoder(
-#                 n_layers=enc_layers, 
-#                 d_model=cnn_channels[-1], 
-#                 n_head=num_heads,
-#                 d_inner=d_inner
-#             )
-# 
-#         if fc[-1] != 1:
-#             fc.append(1)
-#         self.fc = nn.ModuleList()
-#         self.fc.append(
-#                 nn.Sequential(
-#                     nn.Dropout(p=fc_dropout),
-#                     nn.Linear(cnn_channels[-1] * 2, fc[0])
-#                 )
-#             )
-#         for i in range(len(fc) - 1):
-#             self.fc.append(
-#                     nn.Sequential(
-#                         nn.ReLU(),
-#                         nn.Linear(fc[i], fc[i + 1])
-#                     )
-#                 )
-#         self.fc.append(nn.Sigmoid())
-# 
-# 
-#     def forward(self, feats):
-#         # feats: (B, D, S)
-#         for cnn in  self.cnn:
-#             feats = cnn(feats)
-#         feats = feats.transpose(1, 2)
-#         feats = self.performer_encoder(feats)
-#         feats = torch.cat((feats.max(dim=1)[0].squeeze(1), feats.mean(dim=1).squeeze(1)), dim=1)
-#         for fc in self.fc:
-#             feats = fc(feats)
-#         return feats
-
-
-
-def get_args():
-    p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    #p.add_argument()
-
-    #p.add_argument('--seed', type=int, default=2020)
-    return p
-
-
-if __name__ == "__main__":
-    p = get_args()
-    args = p.parse_args()
-    #np.random.seed(args.seed)
-
+def plot_pos_neg(args):
+    pass

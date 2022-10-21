@@ -43,7 +43,7 @@ def predict(model: nn.Module, data_loader: DataLoader, device=torch.device('cuda
     for feats, _, enh_idxs, prom_idxs, labels in data_loader:
         feats, labels = feats.to(device), labels.to(device)
         # enh_idxs, prom_idxs = feats.to(device), prom_idxs.to(device)
-        pred = model(feats, enh_idx=enh_idxs, prom_idx=prom_idxs)
+        pred = model(feats, enh_idx=enh_idxs, prom_idx=prom_idxs, save_final_feat=True)
         pred = pred.detach().cpu().numpy()
         labels = labels.detach().cpu().numpy()
         result.append(pred)

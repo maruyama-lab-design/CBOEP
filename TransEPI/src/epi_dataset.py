@@ -139,12 +139,12 @@ class EPIDataset(Dataset):
                     start_bin, stop_bin = seq_begin // self.bin_size, seq_end // self.bin_size
 
                     #  ___以下追加___
-                    if enh_bin - prom_bin >= self.num_bins:
-                        enh_bin -= 1
-                        print(f"enh_bin:{enh_bin}, prom_bin:{prom_bin}")
-                    if prom_bin - enh_bin >= self.num_bins:
-                        prom_bin -= 1
-                        print(f"enh_bin:{enh_bin}, prom_bin:{prom_bin}")
+                    # if enh_bin - prom_bin >= self.num_bins:
+                    #     enh_bin -= 1
+                    #     print(f"enh_bin:{enh_bin}, prom_bin:{prom_bin}")
+                    # if prom_bin - enh_bin >= self.num_bins:
+                    #     prom_bin -= 1
+                    #     print(f"enh_bin:{enh_bin}, prom_bin:{prom_bin}")
                     # if stop_bin - start_bin >= self.num_bins:
                     #     stop_bin -= 1
                     #     print(f"stop_bin:{stop_bin}, start_bin:{start_bin}")
@@ -275,6 +275,20 @@ class EPIDataset(Dataset):
                 torch.as_tensor(mark, dtype=torch.float).view(1, -1),
                 ar
             ), dim=0)
+
+        # 以下を追加 (何故かenh_idxとprom_idxがfeatsからはみ出すことがあるので、修正する)
+        if enh_idx == self.seq_len // self.bin_size:
+            print(f"enh idx: {enh_idx}, prom idx: {prom_idx}")
+            enh_idx -= 1
+        if prom_idx == self.seq_len // self.bin_size:
+            print(f"enh idx: {enh_idx}, prom idx: {prom_idx}")
+            prom_idx -= 1
+        # if enh_bin - prom_bin >= self.num_bins:
+        #     enh_bin -= 1
+        #     print(f"enh_bin:{enh_bin}, prom_bin:{prom_bin}")
+        # if prom_bin - enh_bin >= self.num_bins:
+        #     prom_bin -= 1
+        #     print(f"enh_bin:{enh_bin}, prom_bin:{prom_bin}")
 
         return ar, torch.as_tensor([dist], dtype=torch.float), torch.as_tensor([enh_idx], dtype=torch.float), torch.as_tensor([prom_idx], dtype=torch.float), torch.as_tensor([label], dtype=torch.float)
 
