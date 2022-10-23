@@ -258,10 +258,6 @@ class TransEPI(nn.Module):
         # print(f"batch_size: {batch_size}") # 64
         # print(f"vector size before FC: {seq_embed.size()}") # (batch_size, 720)
 
-
-        for fc in self.fc:
-            seq_embed = fc(seq_embed)
-
         # TODO
         if save_final_feat == True:
             seq_embed_list = seq_embed.tolist()
@@ -269,6 +265,11 @@ class TransEPI(nn.Module):
             os.makedirs(dir_path, exist_ok=True)
             with open(os.path.join(dir_path, f"feats_{batch_idx}.pkl"), mode='wb') as f:
                 pickle.dump(seq_embed_list,f)
+
+
+        for fc in self.fc:
+            seq_embed = fc(seq_embed)
+
 
         if return_att:
             return seq_embed, dists, att

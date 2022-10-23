@@ -273,7 +273,7 @@ def train_transformer_model(
     # ___testing...___
     print(f"test on epoch{best_epoch}...")
     best_model_path = f"{outdir}\\epoch{best_epoch}.pt"
-    
+
     model = model_class(**model_params).to(device)
     optimizer = optimizer_class(model.parameters(), **optimizer_params)
     state_dict = torch.load(best_model_path)
@@ -283,7 +283,7 @@ def train_transformer_model(
 
     model.eval()
     test_loss = None
-    test_pred, test_true, test_pred_dist, test_true_dist = predict(model, test_loader, save_final_feat=True)
+    test_pred, test_true, test_pred_dist, test_true_dist = predict(model, test_loader, save_final_feat=True, research_name=research_name)
     test_AUC, test_AUPR, test_F1, test_pre, test_rec, test_MCC = misc_utils.evaluator(test_true, test_pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
     if use_mse == True:
         test_loss = metrics.log_loss(test_true, test_pred) + metrics.mean_squared_error(test_true_dist, test_pred_dist)
