@@ -1,12 +1,17 @@
-{
+{   
+    "dataname": "BENGI",
+    "datatype": "maxflow",
+
+
     "data_opts": {
-        "datasets": [
-            "../data/TargetFinder/original/GM12878_train.tsv"
-        ],
+        "train_cell_type": ["GM12878", "HeLa"],
+        "test_cell_type_list": ["NHEK", "K562", "IMR90", "GM12878", "HeLa"],
         "feats_order": ["CTCF", "DNase", "H3K4me1", "H3K4me3", "H3K36me3", "H3K9me3",  "H3K27me3"],
         "feats_config": "../data/genomic_data/CTCF_DNase_6histone.500.json", 
         "bin_size": 500,
-        "seq_len": 2500000
+        "seq_len": 2600000,
+        "mask_window": false,
+        "mask_neighbor": false
     },
 
     "model_opts": {
@@ -29,7 +34,7 @@
         "batch_size": 64,
         "num_epoch": 10,
         "patience": 100,
-        "num_workers": 8,
+        "num_workers": 12,
         "use_scheduler": false
     }
 }

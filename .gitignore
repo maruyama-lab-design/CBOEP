@@ -18,3 +18,9 @@ ep2vec_result
 */result/*
 *.narrowPeak
 *.pt
+*.png
+*.pkl
+*.h5
+*.DS_Store
+*.xlsx
+*.tsv

@@ -1,0 +1,5 @@
+{
+    "datasets": [
+        "./data/TargetFinder/maxflow/GM12878_train.csv"
+    ]
+}

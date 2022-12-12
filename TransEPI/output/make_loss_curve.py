@@ -24,4 +24,5 @@ for dirname in dirlist:
     plt.plot(x_data, y_data1, label="train loss")
     plt.plot(x_data, y_data2, label="valid loss")
     plt.legend()
+    plt.title(f"{os.path.basename(dirname)}")
     fig.savefig(f"{dirname}/loss.png")
