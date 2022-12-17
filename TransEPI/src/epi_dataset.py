@@ -120,6 +120,10 @@ class EPIDataset(Dataset):
                             knock_range.append((knock_start, knock_end))
 
                     cell = enh_name.split('|')[1]
+                    # append...
+                    if cell == "HeLa-S3":
+                        cell = "HeLa"
+                    # ___
                     strand = prom_name.split('|')[-1]
 
                     enh_coord = (int(enh_start) + int(enh_end)) // 2
@@ -211,19 +215,45 @@ class EPIDataset(Dataset):
         enh_idx = enh_bin - start_bin + left_pad
         prom_idx = prom_bin - start_bin + left_pad
 
+        # 以下を追加 (何故かenh_idxとprom_idxがfeatsからはみ出すことがあるので、修正する)
+        if enh_idx == self.seq_len // self.bin_size:
+            print(f"enh idx: {enh_idx}, prom idx: {prom_idx}")
+            enh_idx -= 1
+        if prom_idx == self.seq_len // self.bin_size:
+            print(f"enh idx: {enh_idx}, prom idx: {prom_idx}")
+            prom_idx -= 1
+        # _____
+
+        # mask用に修正
+        if self.mask_neighbor and self.mask_window:
+            if prom_idx > enh_idx:
+                enh_idx, prom_idx = 10, 31
+            elif prom_idx < enh_idx:
+                enh_idx, prom_idx = 31, 10
+            else:
+                enh_idx, prom_idx = 10, 31
 
         # print(self.samples[idx], self.metainfo["shift"][idx])
-        ar = torch.zeros((0, stop_bin - start_bin))
+        if self.mask_neighbor and self.mask_window:
+            ar = torch.zeros((0, 42)) # enh+-10, prm +-10
+        else:
+            ar = torch.zeros((0, stop_bin - start_bin))
         # print(start_bin - left_pad, stop_bin + right_pad, enh_bin, prom_bin, enh_idx, prom_idx)
         for feat in self.feats_order:
-            ar = torch.cat((ar, self.feats[cell][feat][chrom][start_bin:stop_bin].view(1, -1)), dim=0)
+            if self.mask_neighbor and self.mask_window:
+                enh_feats = self.feats[cell][feat][chrom][enh_bin-10:enh_bin+11].view(1, -1)
+                prom_feats = self.feats[cell][feat][chrom][prom_bin-10:prom_bin+11].view(1, -1)
+                cat_feats = torch.cat((enh_feats, prom_feats), dim=1)
+                ar = torch.cat((ar, cat_feats), dim=0)
+            else:
+                ar = torch.cat((ar, self.feats[cell][feat][chrom][start_bin:stop_bin].view(1, -1)), dim=0)
         ar = torch.cat((
             torch.zeros((self.num_feats, left_pad)),
             ar, 
             torch.zeros((self.num_feats, right_pad))
             ), dim=1)
 
-        if knock_range is not None:
+        if knock_range is not None: # よくわかんない部分 無視でオッケーか？
             dim, length = ar.size()
             mask = [1 for _ in range(self.num_bins)]
             for knock_start, knock_end in knock_range:
@@ -236,27 +266,39 @@ class EPIDataset(Dataset):
             mask = torch.FloatTensor(mask)
             ar = ar * mask
 
-        if self.mask_window:
-            shift = min(abs(enh_bin - prom_bin) - 5, 0)
-            mask = torch.cat((
-                torch.ones(ar.size(0), min(enh_bin, prom_bin) - start_bin + left_pad + 3 + shift),
-                torch.zeros(ar.size(0), max(abs(enh_idx - prom_idx) - 5, 0)),
-                torch.ones(ar.size(0), stop_bin + right_pad - max(enh_bin, prom_bin) + 2)
-            ), dim=1)
-            assert mask.size() == ar.size(), "{}".format(mask.size())
-            ar = ar * mask
-        if self.mask_neighbor:
-            mask = torch.cat((
-                torch.zeros(ar.size(0), min(enh_bin, prom_bin) - start_bin + left_pad - 2),
-                torch.ones(ar.size(0), abs(enh_bin - prom_bin) + 5),
-                torch.zeros(ar.size(0), stop_bin + right_pad - max(enh_bin, prom_bin) - 3)
-            ), dim=1)
-            assert mask.size() == ar.size(), "{}".format(mask.size())
-            ar = ar * mask
+        # mask実験は書き換える
+        # if self.mask_window:
+        #     shift = min(abs(enh_bin - prom_bin) - 5, 0)
+        #     mask = torch.cat((
+        #         torch.ones(ar.size(0), min(enh_bin, prom_bin) - start_bin + left_pad + 3 + shift),
+        #         torch.zeros(ar.size(0), max(abs(enh_idx - prom_idx) - 5, 0)),
+        #         torch.ones(ar.size(0), stop_bin + right_pad - max(enh_bin, prom_bin) + 2)
+        #     ), dim=1)
+        #     assert mask.size() == ar.size(), "{}".format(mask.size())
+        #     ar = ar * mask
+        # if self.mask_neighbor:
+        #     mask = torch.cat((
+        #         torch.zeros(ar.size(0), min(enh_bin, prom_bin) - start_bin + left_pad - 2),
+        #         torch.ones(ar.size(0), abs(enh_bin - prom_bin) + 5),
+        #         torch.zeros(ar.size(0), stop_bin + right_pad - max(enh_bin, prom_bin) - 3)
+        #     ), dim=1)
+        #     assert mask.size() == ar.size(), "{}".format(mask.size())
+        #     ar = ar * mask
 
-        pos_enc = torch.arange(self.num_bins).view(1, -1)
-        pos_enc = torch.cat((pos_enc - min(enh_idx, prom_idx), max(enh_idx, prom_idx) - pos_enc), dim=0)
-        if self.sin_encoding:
+        if self.mask_neighbor and self.mask_window:
+            if prom_bin > enh_bin:
+                enh_pos_enc = torch.arange(-10, 11, 1).view(1, -1)
+                enh_pos_enc = torch.cat((enh_pos_enc, torch.arange(prom_bin-enh_bin-10, prom_bin-enh_bin+11, 1).view(1, -1)), dim=1)
+
+                prom_pos_enc = torch.arange(enh_bin-prom_bin-10, enh_bin-prom_bin+11, 1).view(1, -1)
+                prom_pos_enc = torch.cat((prom_pos_enc, torch.arange(-10, 11, 1).view(1, -1)), dim=1)
+
+                pos_enc = torch.cat((enh_pos_enc, prom_pos_enc), dim=0)
+        else:
+            pos_enc = torch.arange(self.num_bins).view(1, -1)
+            pos_enc = torch.cat((pos_enc - min(enh_idx, prom_idx), max(enh_idx, prom_idx) - pos_enc), dim=0)
+
+        if self.sin_encoding: # たぶん常にfalse
             pos_enc = torch.sin(pos_enc / 2 / self.num_bins * np.pi).view(2, -1)
         else:
             pos_enc = self.sym_log(pos_enc.min(dim=0)[0]).view(1, -1)
@@ -276,19 +318,8 @@ class EPIDataset(Dataset):
                 ar
             ), dim=0)
 
-        # 以下を追加 (何故かenh_idxとprom_idxがfeatsからはみ出すことがあるので、修正する)
-        if enh_idx == self.seq_len // self.bin_size:
-            print(f"enh idx: {enh_idx}, prom idx: {prom_idx}")
-            enh_idx -= 1
-        if prom_idx == self.seq_len // self.bin_size:
-            print(f"enh idx: {enh_idx}, prom idx: {prom_idx}")
-            prom_idx -= 1
-        # if enh_bin - prom_bin >= self.num_bins:
-        #     enh_bin -= 1
-        #     print(f"enh_bin:{enh_bin}, prom_bin:{prom_bin}")
-        # if prom_bin - enh_bin >= self.num_bins:
-        #     prom_bin -= 1
-        #     print(f"enh_bin:{enh_bin}, prom_bin:{prom_bin}")
+
+
 
         return ar, torch.as_tensor([dist], dtype=torch.float), torch.as_tensor([enh_idx], dtype=torch.float), torch.as_tensor([prom_idx], dtype=torch.float), torch.as_tensor([label], dtype=torch.float)
 
