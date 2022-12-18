@@ -222,42 +222,18 @@ class EPIDataset(Dataset):
         if prom_idx == self.seq_len // self.bin_size:
             print(f"enh idx: {enh_idx}, prom idx: {prom_idx}")
             prom_idx -= 1
-        # _____
+        # ___
 
-        # mask用に修正
-        if self.mask_neighbor and self.mask_window:
-            if prom_idx > enh_idx:
-                enh_idx, prom_idx = 10, 31
-            elif prom_idx < enh_idx:
-                enh_idx, prom_idx = 31, 10
-            else:
-                enh_idx, prom_idx = 10, 31
 
-        # print(self.samples[idx], self.metainfo["shift"][idx])
-        if self.mask_neighbor and self.mask_window:
-            ar = torch.zeros((0, 42)) # enh+-10, prm +-10
-        else:
-            ar = torch.zeros((0, stop_bin - start_bin))
-        # print(start_bin - left_pad, stop_bin + right_pad, enh_bin, prom_bin, enh_idx, prom_idx)
+        ar = torch.zeros((0, stop_bin - start_bin))
         for feat in self.feats_order:
-            if self.mask_neighbor and self.mask_window:
-                enh_feats = self.feats[cell][feat][chrom][enh_bin-10:enh_bin+11].view(1, -1)
-                prom_feats = self.feats[cell][feat][chrom][prom_bin-10:prom_bin+11].view(1, -1)
-                # print(enh_feats.size())
-                # print(prom_feats.size())
-                cat_feats = torch.cat((enh_feats, prom_feats), dim=1)
-                ar = torch.cat((ar, cat_feats), dim=0)
-            else:
-                ar = torch.cat((ar, self.feats[cell][feat][chrom][start_bin:stop_bin].view(1, -1)), dim=0)
+            ar = torch.cat((ar, self.feats[cell][feat][chrom][start_bin:stop_bin].view(1, -1)), dim=0)
 
-        if self.mask_neighbor and self.mask_window:
-            tmp = ""
-        else:
-            ar = torch.cat((
-                torch.zeros((self.num_feats, left_pad)),
-                ar, 
-                torch.zeros((self.num_feats, right_pad))
-                ), dim=1)
+        ar = torch.cat((
+            torch.zeros((self.num_feats, left_pad)),
+            ar, 
+            torch.zeros((self.num_feats, right_pad))
+            ), dim=1)
 
         if knock_range is not None: # よくわかんない部分 無視でオッケーか？
             dim, length = ar.size()
@@ -273,44 +249,26 @@ class EPIDataset(Dataset):
             ar = ar * mask
 
         # mask実験は書き換える
-        # if self.mask_window:
-        #     shift = min(abs(enh_bin - prom_bin) - 5, 0)
-        #     mask = torch.cat((
-        #         torch.ones(ar.size(0), min(enh_bin, prom_bin) - start_bin + left_pad + 3 + shift),
-        #         torch.zeros(ar.size(0), max(abs(enh_idx - prom_idx) - 5, 0)),
-        #         torch.ones(ar.size(0), stop_bin + right_pad - max(enh_bin, prom_bin) + 2)
-        #     ), dim=1)
-        #     assert mask.size() == ar.size(), "{}".format(mask.size())
-        #     ar = ar * mask
-        # if self.mask_neighbor:
-        #     mask = torch.cat((
-        #         torch.zeros(ar.size(0), min(enh_bin, prom_bin) - start_bin + left_pad - 2),
-        #         torch.ones(ar.size(0), abs(enh_bin - prom_bin) + 5),
-        #         torch.zeros(ar.size(0), stop_bin + right_pad - max(enh_bin, prom_bin) - 3)
-        #     ), dim=1)
-        #     assert mask.size() == ar.size(), "{}".format(mask.size())
-        #     ar = ar * mask
+        if self.mask_window:
+            shift = min(abs(enh_bin - prom_bin) - 5, 0)
+            mask = torch.cat((
+                torch.ones(ar.size(0), min(enh_bin, prom_bin) - start_bin + left_pad + 3 + shift),
+                torch.zeros(ar.size(0), max(abs(enh_idx - prom_idx) - 5, 0)),
+                torch.ones(ar.size(0), stop_bin + right_pad - max(enh_bin, prom_bin) + 2)
+            ), dim=1)
+            assert mask.size() == ar.size(), "{}".format(mask.size())
+            ar = ar * mask
+        if self.mask_neighbor:
+            mask = torch.cat((
+                torch.zeros(ar.size(0), min(enh_bin, prom_bin) - start_bin + left_pad - 2),
+                torch.ones(ar.size(0), abs(enh_bin - prom_bin) + 5),
+                torch.zeros(ar.size(0), stop_bin + right_pad - max(enh_bin, prom_bin) - 3)
+            ), dim=1)
+            assert mask.size() == ar.size(), "{}".format(mask.size())
+            ar = ar * mask
 
-        if self.mask_neighbor and self.mask_window:
-            if prom_bin > enh_bin:
-                enh_pos_enc = torch.arange(-10, 11, 1).view(1, -1)
-                enh_pos_enc = torch.cat((enh_pos_enc, torch.arange(prom_bin-enh_bin-10, prom_bin-enh_bin+11, 1).view(1, -1)), dim=1)
-
-                prom_pos_enc = torch.arange(enh_bin-prom_bin-10, enh_bin-prom_bin+11, 1).view(1, -1)
-                prom_pos_enc = torch.cat((prom_pos_enc, torch.arange(-10, 11, 1).view(1, -1)), dim=1)
-
-                pos_enc = torch.cat((enh_pos_enc, prom_pos_enc), dim=0)
-            else:
-                prom_pos_enc = torch.arange(-10, 11, 1).view(1, -1)
-                prom_pos_enc = torch.cat((prom_pos_enc, torch.arange(enh_bin-prom_bin-10, enh_bin-prom_bin+11, 1).view(1, -1)), dim=1)
-
-                enh_pos_enc = torch.arange(prom_bin-enh_bin-10, prom_bin-enh_bin+11, 1).view(1, -1)
-                enh_pos_enc = torch.cat((enh_pos_enc, torch.arange(-10, 11, 1).view(1, -1)), dim=1)
-
-                pos_enc = torch.cat((prom_pos_enc, enh_pos_enc), dim=0)
-        else:
-            pos_enc = torch.arange(self.num_bins).view(1, -1)
-            pos_enc = torch.cat((pos_enc - min(enh_idx, prom_idx), max(enh_idx, prom_idx) - pos_enc), dim=0)
+        pos_enc = torch.arange(self.num_bins).view(1, -1)
+        pos_enc = torch.cat((pos_enc - min(enh_idx, prom_idx), max(enh_idx, prom_idx) - pos_enc), dim=0)
 
         if self.sin_encoding: # たぶん常にfalse
             pos_enc = torch.sin(pos_enc / 2 / self.num_bins * np.pi).view(2, -1)
