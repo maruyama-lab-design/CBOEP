@@ -85,14 +85,19 @@ def make_biasError_table(dataname, datatype_list, cell_line, outdir):
 		"distance limit": [],
 		"positive": [],
 		"negative": [],
-		"enhancer bias error average": [],
-		"enhancer bias error standard deviation": [],
-		"promoter bias error average": [],
-		"promoter bias error standard deviation": []
+		"|fe^+ - fe^-|": [],
+		"std for e": [],
+		"|fp^+ - fp^-|": [],
+		"std for p": [],
+		"|fr^+ - fr^-|": [],
+		"std for r": [],
 	}
 
 	for datatype in datatype_list:
-		infiles = glob.glob(os.path.join(os.path.dirname(__file__), "data", dataname, datatype, f"{cell_line}*.csv"))
+		print(f"{dataname} {datatype}...")
+		infiles = glob.glob(os.path.join(os.path.dirname(__file__), "data", dataname, datatype, f"{cell_line}*.tsv"))
+		if len(infiles) == 0:
+			continue
 		df = files2df(infiles)
 
 		table_dir["dataset"].append(dataname)
@@ -106,6 +111,8 @@ def make_biasError_table(dataname, datatype_list, cell_line, outdir):
 		table_dir["positive"].append(len(df[df["label"] == 1]))
 		table_dir["negative"].append(len(df[df["label"] == 0]))
 
+		all_PosNeg_cnt = np.zeros((1000, 1000), dtype="int64") # 大きめに用意
+		all_pair_cnt = 0
 		for regionType in ["enhancer", "promoter"]:
 			PosNeg_cnt = np.zeros((1000, 1000), dtype="int64") # 大きめに用意
 			columnName = regionType + "_name"
@@ -124,6 +131,9 @@ def make_biasError_table(dataname, datatype_list, cell_line, outdir):
 				
 				PosNeg_cnt += PosNeg_cnt_by_chrom
 			
+			all_PosNeg_cnt += PosNeg_cnt
+			all_pair_cnt += pair_cnt
+			
 			error_list = np.empty(0)
 			for i in range(1000):
 				for j in range(1000):
@@ -134,8 +144,27 @@ def make_biasError_table(dataname, datatype_list, cell_line, outdir):
 			assert pair_cnt == len(error_list)
 
 			# table_dir["region"].append(regionType)
-			table_dir[f"{regionType} bias error average"].append(error_list.mean())
-			table_dir[f"{regionType} bias error standard deviation"].append(error_list.std())
+			if regionType == "enhancer":
+				table_dir[f"|fe^+ - fe^-|"].append(error_list.mean())
+				table_dir[f"std for e"].append(error_list.std())
+			else:
+				table_dir[f"|fp^+ - fp^-|"].append(error_list.mean())
+				table_dir[f"std for p"].append(error_list.std())
+
+
+		error_list = np.empty(0)
+		for i in range(1000):
+				for j in range(1000):
+					error = abs(i - j)
+					for k in range(all_PosNeg_cnt[i][j]):
+						error_list = np.append(error_list, error)
+
+		assert all_pair_cnt == len(error_list)
+
+		table_dir[f"|fr^+ - fr^-|"].append(error_list.mean())
+		table_dir[f"std for r"].append(error_list.std())
+
+
 
 
 	outfile = os.path.join(outdir, f"{dataname}-{cell_line}_bias_error.csv")
@@ -148,15 +177,15 @@ def make_biasError_table(dataname, datatype_list, cell_line, outdir):
 
 
 def files2df(infiles):
+	
 	outdf = None
 	for i, infile in enumerate(infiles):
 		if i == 0:
-			outdf = pd.read_csv(infile, usecols=["enhancer_chrom", "enhancer_name", "promoter_name", "label"])
+			outdf = pd.read_table(infile, header=None, names=["label", "_0", "enhancer_chrom", "_1", "_2", "enhancer_name", "_3", "_4", "_5", "promoter_name"])
 		else:
-			tmpdf = pd.read_csv(infile, usecols=["enhancer_chrom", "enhancer_name", "promoter_name", "label"])
+			tmpdf = pd.read_table(infile, header=None, names=["label", "_0", "enhancer_chrom", "_1", "_2", "enhancer_name", "_3", "_4", "_5", "promoter_name"])
 			outdf = pd.concat([outdf, tmpdf], axis=0)
-
-	return outdf
+	return outdf[["enhancer_chrom", "enhancer_name", "promoter_name", "label"]]
 
 
 
@@ -164,7 +193,8 @@ if __name__ == '__main__':
 	
 	dataname_list = ["BENGI", "TargetFinder"]
 	datatype_list = ["original", "maxflow_2500000", "maxflow_5000000", "maxflow_10000000", "maxflow_9999999999"]
-	cell_line_list = ["GM12878", "HeLa", "IMR90", "K562", "NHEK"]
+	# cell_line_list = ["GM12878", "HeLa", "IMR90", "K562", "NHEK", "HMEC"]
+	cell_line_list = ["GM12878"]
 	# for dataname in dataname_list:
 	# 	for datatype in datatype_list:
 	# 		for cell_line in cell_line_list:
