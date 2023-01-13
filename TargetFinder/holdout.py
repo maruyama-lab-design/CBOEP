@@ -18,6 +18,10 @@ import warnings, json, gzip
 from torch import Size
 
 
+from line_notify import line_notify
+
+INF = 9999999999
+
 def get_classifier(args):
 	return GradientBoostingClassifier(n_estimators = args.tree, learning_rate = args.alpha, max_depth = args.depth, max_features = 'log2', random_state = args.seed, verbose=1)
 	# return svm.SVC(kernel='linear', random_state=0, probability=True)
@@ -72,9 +76,12 @@ def holdout(args, df):
 	# for i in range(5):
 	# 	print(x_train[i], f"label={y_train[i]}")
 
+	# print(x_train[0])
+	x_train = np.nan_to_num(x_train, nan=0, posinf=0)
 	classifier.fit(x_train, y_train, sample_weight=weights) # 学習
 
 	x_test = test_df.drop(columns=nonpredictors).values
+	x_test = np.nan_to_num(x_test, nan=0, posinf=0)
 	y_test = test_df["label"].values.flatten()
 	y_pred = classifier.predict_proba(x_test) # predict
 	y_pred = [prob[1] for prob in y_pred] # 正例確率のみを抽出
@@ -121,6 +128,7 @@ def get_args():
 	p.add_argument("--tree", type=int, default=4000, help="number of trees")
 	p.add_argument("--depth", type=int, default=25, help="number of depth")
 	p.add_argument("--alpha", type=float, default=0.001, help="learning rate")
+	p.add_argument("--region", default="epw")
 	p.add_argument("--outname", help="Output filename")
 	p.add_argument('--seed', type=int, default=2020, help="Random seed")
 
@@ -134,48 +142,66 @@ if __name__ == "__main__":
 
 	# print(os.path.join(os.path.dirname(os.path.abspath(__file__)), "condifig_dataset", "*.json"))
 
-for dataname in ["BENGI"]:
-	for datatype in ["original", "maxflow"]:
-		for cl in ["GM12878", "HeLa", "K562", "IMR90", "NHEK"]:
-			# for config_file in glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), "config_dataset", "*.json")):
-			for tree in [100]:
-				for depth in [10]:
-					for alpha in [0.001]:
 
-						args.dataname = dataname
-						args.datatype = datatype
-						args.tree = tree
-						args.depth = depth
-						args.alpha = alpha
+	for dataname in ["BENGI"]:
+		for datatype in ["original", "maxflow_2500000", "maxflow_5000000", "maxflow_10000000", f"maxflow_{INF}"]:
+			for region in ["ep", "epw"]:
+				for cl in ["GM12878", "HeLa", "K562", "NHEK", "IMR90"]:
+					# for config_file in glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), "config_dataset", "*.json")):
+					for tree in [100, 500, 1000, 1500]:
+						for depth in [10, 15, 20, 25]:
+							for alpha in [0.001, 0.0001]:
 
-
-
-						# config = json.load(open(args.config))
-
-						# args.outname = os.path.basename(os.path.splitext(args.config)[0])
-						args.outname = cl
-						args.outname += f",{args.tree}"
-						args.outname += f",{args.depth}"
-						args.outname += f",{args.alpha}"
+								args.dataname = dataname
+								args.datatype = datatype
+								args.region = region
+								args.tree = tree
+								args.depth = depth
+								args.alpha = alpha
 
 
-						# data_list = config["datasets"]
-						data_list = glob(os.path.join(os.path.dirname(__file__), "data", "epw", "w_feature", dataname, datatype, f"{cl}*.csv"))
-						if len(data_list) == 0:
-							continue
-						print(data_list)
-						df = datalist_to_dataframe(data_list)
 
-						args.outdir = f"./output/{args.dataname}_{args.datatype}"
-						# args.outdir = config["outdir"]
+								# config = json.load(open(args.config))
 
-						if not os.path.exists(args.outdir):
-							os.mkdir(args.outdir)
+								# args.outname = os.path.basename(os.path.splitext(args.config)[0])
+								args.outname = cl
+								args.outname += f",{args.tree}"
+								args.outname += f",{args.depth}"
+								args.outname += f",{args.alpha}"
 
-						if os.path.exists(os.path.join(args.outdir, args.outname + ".csv")):
-							continue
 
-						holdout(args, df)
+								# data_list = config["datasets"]
+								data_list = glob(os.path.join(os.path.dirname(__file__), "data", args.region, "w_feature", dataname, datatype, f"{cl}*.csv"))
+								if len(data_list) == 0:
+									continue
+								print(data_list)
+								df = datalist_to_dataframe(data_list)
+
+								args.outdir = f"./output/{args.region}/{args.dataname}_{args.datatype}"
+								# args.outdir = config["outdir"]
+
+								if not os.path.exists(args.outdir):
+									os.mkdir(args.outdir)
+
+								if os.path.exists(os.path.join(args.outdir, args.outname + ".csv")):
+									print(f'{os.path.join(args.outdir, args.outname + ".csv")} has already exsisted!!')
+									continue
+								
+
+								# holdout(args, df)
+
+								try:
+									start_txt = f"開始 args: {args}"
+									line_notify(start_txt)
+									holdout(args, df)
+								except Exception as e:
+									line_notify(e)
+									text = f"{args.dataname} {args.datatype} {cl} error!!"
+									line_notify(text)
+								else:
+									text = f"TargetFinder tool:\n{args.dataname} {args.datatype} {cl}\ntree={args.tree} depth={args.depth} alpha={args.alpha} finished!!"
+									line_notify(text)
+
 
 
 
