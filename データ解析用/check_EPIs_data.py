@@ -45,7 +45,7 @@ def make_heatMap(VV, x_Max, y_Max, output_path):
 	plt.close('all')
 
 	
-def make_PosNeg_figure(df, outdir):
+def make_PosNeg_figure(df, dataname, datatype, cell_line, outdir):
 
 
 	for regionType in ["enhancer", "promoter"]:
@@ -67,14 +67,14 @@ def make_PosNeg_figure(df, outdir):
 				posCnt_Max_by_chrom = max(posCnt_Max_by_chrom, posCnt)
 				negCnt_Max_by_chrom = max(negCnt_Max_by_chrom, negCnt)
 
-			outfile = os.path.join(outdir, f"{chrom}_{regionType}.png")
-			make_heatMap(PosNeg_cnt_by_chrom, posCnt_Max_by_chrom, negCnt_Max_by_chrom, outfile)
+			# outfile = os.path.join(outdir, f"{chrom}_{regionType}.png")
+			# make_heatMap(PosNeg_cnt_by_chrom, posCnt_Max_by_chrom, negCnt_Max_by_chrom, outfile)
 			
 			PosNeg_cnt += PosNeg_cnt_by_chrom
 			posCnt_Max = max(posCnt_Max, posCnt_Max_by_chrom)
 			negCnt_Max = max(negCnt_Max, negCnt_Max_by_chrom)
 
-		outfile = os.path.join(outdir, f"chrAll_{regionType}.png")
+		outfile = os.path.join(outdir, f"{dataname}_{datatype}_{cell_line}_chrAll_{regionType}.png")
 		make_heatMap(PosNeg_cnt, posCnt_Max, negCnt_Max, outfile)
 
 
@@ -95,8 +95,9 @@ def make_biasError_table(dataname, datatype_list, cell_line, outdir):
 
 	for datatype in datatype_list:
 		print(f"{dataname} {datatype}...")
-		infiles = glob.glob(os.path.join(os.path.dirname(__file__), "data", dataname, datatype, f"{cell_line}*.tsv"))
+		infiles = glob.glob(os.path.join(os.path.dirname(__file__), "data", dataname, datatype, f"{cell_line}.csv*"))
 		if len(infiles) == 0:
+			print("continue...")
 			continue
 		df = files2df(infiles)
 
@@ -176,38 +177,84 @@ def make_biasError_table(dataname, datatype_list, cell_line, outdir):
 
 
 
+def count_PosNeg(dataname, datatype, cell_line):
+
+	infile = os.path.join(os.path.dirname(__file__), "data", dataname, datatype, f"{cell_line}.tsv")
+	if os.path.exists(infile) == False:
+		return
+	
+	df = pd.read_table(infile, header=None, names=["label", "_0", "enhancer_chrom", "_1", "_2", "enhancer_name", "_3", "_4", "_5", "promoter_name"])
+	enh = len(df.groupby("enhancer_name"))
+	prm = len(df.groupby("promoter_name"))
+	pos = len(df[df["label"] == 1])
+	neg = len(df[df["label"] == 0])
+	print(f"{dataname} {cell_line} enh={enh} prm={prm} pos={pos} neg={neg}")
+
+
+
+
+
 def files2df(infiles):
 	
 	outdf = None
 	for i, infile in enumerate(infiles):
-		if i == 0:
-			outdf = pd.read_table(infile, header=None, names=["label", "_0", "enhancer_chrom", "_1", "_2", "enhancer_name", "_3", "_4", "_5", "promoter_name"])
-		else:
-			tmpdf = pd.read_table(infile, header=None, names=["label", "_0", "enhancer_chrom", "_1", "_2", "enhancer_name", "_3", "_4", "_5", "promoter_name"])
-			outdf = pd.concat([outdf, tmpdf], axis=0)
+		if os.path.splitext(os.path.basename(infile))[1] == ".tsv":
+			if i == 0:
+				outdf = pd.read_table(infile, header=None, names=["label", "_0", "enhancer_chrom", "_1", "_2", "enhancer_name", "_3", "_4", "_5", "promoter_name"])
+			else:
+				tmpdf = pd.read_table(infile, header=None, names=["label", "_0", "enhancer_chrom", "_1", "_2", "enhancer_name", "_3", "_4", "_5", "promoter_name"])
+				outdf = pd.concat([outdf, tmpdf], axis=0)
+		elif os.path.splitext(os.path.basename(infile))[1] == ".csv":
+			if i == 0:
+				outdf = pd.read_csv(infile)
+			else:
+				tmpdf = pd.read_csv(infile)
+				outdf = pd.concat([outdf, tmpdf], axis=0)
+
 	return outdf[["enhancer_chrom", "enhancer_name", "promoter_name", "label"]]
 
 
 
 if __name__ == '__main__':
 	
-	dataname_list = ["BENGI", "TargetFinder"]
+	dataname_list = ["TargetFinder","BENGI"]
 	datatype_list = ["original", "maxflow_2500000", "maxflow_5000000", "maxflow_10000000", "maxflow_9999999999"]
+	# datatype_list = ["original"]
+	cell_line_list = ["GM12878", "HeLa", "IMR90", "K562", "NHEK"]
 	# cell_line_list = ["GM12878", "HeLa", "IMR90", "K562", "NHEK", "HMEC"]
-	cell_line_list = ["GM12878"]
+	# dataname_list = ["BENGI"]
+	# cell_line_list = ["GM12878"]
 	# for dataname in dataname_list:
 	# 	for datatype in datatype_list:
 	# 		for cell_line in cell_line_list:
-	# 			infiles = glob.glob(os.path.join(os.path.dirname(__file__), "data", dataname, datatype, f"{cell_line}*.csv"))
-	# 			df = files2df(infiles)
+	# 			# infiles = glob.glob(os.path.join(os.path.dirname(__file__), "data", dataname, datatype, f"{cell_line}.csv"))
+	# 			if dataname == "TargetFinder" and cell_line == "HeLa":
+	# 				cell_line += "-S3"
+	# 			df = pd.read_csv(os.path.join(os.path.dirname(__file__), "data", dataname, datatype, f"{cell_line}.csv"))
 	# 			# outdir = os.path.join(os.path.dirname(__file__), "fig", dataname, datatype, cell_line)
 	# 			# os.makedirs(outdir, exist_ok=True)
 	# 			# make_PosNeg_figure(df, outdir)
 	# 			outdir = os.path.join(os.path.dirname(__file__), "csv", dataname, datatype, cell_line)
 	# 			make_biasError_table(df, dataname, datatype, cell_line, outdir)
 
+
+	# for dataname in dataname_list:
+	# 	for cell_line in cell_line_list:
+	# 		outdir = os.path.join(os.path.dirname(__file__), "csv")
+	# 		make_biasError_table(dataname, datatype_list, cell_line, outdir)
+			# count_PosNeg(dataname, "original", cell_line)
+
 	for dataname in dataname_list:
-		for cell_line in cell_line_list:
-			outdir = os.path.join(os.path.dirname(__file__), "csv")
-			make_biasError_table(dataname, datatype_list, cell_line, outdir)
+		for datatype in datatype_list:
+			for cell_line in cell_line_list:
+				# outdir = os.path.join(os.path.dirname(__file__), "csv")
+				# make_biasError_table(dataname, datatype_list, cell_line, outdir)
+				# count_PosNeg(dataname, "original", cell_line)
+				if dataname == "TargetFinder" and cell_line == "HeLa":
+					cell_line += "-S3"
+				infile = os.path.join(os.path.dirname(__file__), "data", dataname, datatype, f"{cell_line}.csv")
+				df = pd.read_csv(infile)
+				outdir = os.path.join(os.path.dirname(__file__), "fig")
+				os.makedirs(outdir, exist_ok=True)
+				make_PosNeg_figure(df, dataname, datatype, cell_line, outdir)
 
