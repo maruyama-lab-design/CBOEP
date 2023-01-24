@@ -1,13 +1,13 @@
-# (model_name)
+# NIMF (Negative Interaction by Maximum Flow)
 
-### TargetFinderにあるエンハンサー・プロモーターの領域を延長し，各配列をdoc2vecによる分散表現によって相互作用を予測するモデル
+### Generation of negative enhancer-promoter interactions 
 
-extended_region_researchディレクトリ内のmain.pyを実行してください．
+The main script is extended_region_research/main.py.
 
-### 必要なライブラリ
+### Libraries 
 ---
 
-| ライブラリ | バージョン |
+| Library | Version |
 | :---: | :---: |
 | ```pandas``` | TD |
 | ```numpy``` | TD |
@@ -22,7 +22,7 @@ extended_region_researchディレクトリ内のmain.pyを実行してくださ�
 | `````` | TD |
 
 
-### ディレクトリ構造
+### Directory structure
 ---
 
 ```
@@ -53,10 +53,10 @@ extended_reginon_research
 └── utils.py  
 ```
 
-### 引数 （課題：説明雑な部分を直す)
+### Argument (課題：説明雑な部分を直す)
 ---
 
-| 引数 | デフォルト | 説明 |
+| argument | default value | description |
 | :---: | :---: | ---- |
 | ```-my_data_folder_path``` | 無し | 必要なデータがこのフォルダーをルートパスとして生成されます．必ず指定してください |
 | ```--make_directory``` | 無し | 必要なディレクトリを```-my_data_folder_path```中に生成します |
@@ -74,6 +74,6 @@ extended_reginon_research
 | ```--k_min``` | ```3``` | ```--way_of_kmer == random``` の時のk_min |
 | ```--k_max``` | ```6``` | ```--way_of_kmer == random``` の時のk_max |
 
-### 実行例
+### Example
 ---
 ```main.py -my_data_folder_path /Users/ylwrvr/卒論/Koga_code/data --cell_line_list GM12878 --make_directory --download_reference_genome --share_doc2vec ```
