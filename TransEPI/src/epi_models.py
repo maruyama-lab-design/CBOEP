@@ -84,17 +84,17 @@ class TransEPI(nn.Module):
         self.cnn.append(
                 nn.Sequential(
                     nn.Conv1d(
-                        in_channels=in_dim, 
-                        out_channels=cnn_channels[0], 
-                        kernel_size=cnn_sizes[0], 
-                        padding=cnn_sizes[0] // 2),
-                    nn.BatchNorm1d(cnn_channels[0]),
+                        in_channels=in_dim, # 2500000 ?? 7 ??
+                        out_channels=cnn_channels[0], # 180
+                        kernel_size=cnn_sizes[0], # 11
+                        padding=cnn_sizes[0] // 2), # 11 // 2
+                    nn.BatchNorm1d(cnn_channels[0]), # 180
                     nn.LeakyReLU(),
-                    nn.MaxPool1d(cnn_pool[0])
+                    nn.MaxPool1d(cnn_pool[0]) # 10
                 )
             )
         seq_len //= cnn_pool[0]
-        for i in range(len(cnn_sizes) - 1):
+        for i in range(len(cnn_sizes) - 1): # len(cnn sizes) = 1 ???
             self.cnn.append(
                     nn.Sequential(
                         nn.Conv1d(
@@ -243,7 +243,7 @@ class TransEPI(nn.Module):
         enh_idx = enh_idx.long().view(batch_size) + base_idx
         prom_idx = prom_idx.long().view(batch_size) + base_idx
         feats = feats.reshape(-1, feat_dim)
-        seq_embed = torch.cat((
+        seq_embed = torch.cat(( # get M
             feats[enh_idx, :].view(batch_size, -1), 
             feats[prom_idx, :].view(batch_size, -1),
             seq_embed.mean(dim=1).view(batch_size, -1),

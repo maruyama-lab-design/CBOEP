@@ -241,8 +241,16 @@ class EPIDataset(Dataset):
         # print(start_bin - left_pad, stop_bin + right_pad, enh_bin, prom_bin, enh_idx, prom_idx)
         for feat in self.feats_order:
             if self.mask_neighbor and self.mask_window:
-                enh_feats = self.feats[cell][feat][chrom][enh_bin-10:enh_bin+11].view(1, -1)
-                prom_feats = self.feats[cell][feat][chrom][prom_bin-10:prom_bin+11].view(1, -1)
+                # enh_feats = self.feats[cell][feat][chrom][enh_bin-10:enh_bin+11].view(1, -1)
+                enh_feats = self.feats[cell][feat][chrom][enh_bin-1:enh_bin+2].view(1, -1)
+                enh_feats = torch.cat((torch.zeros(1, 9), enh_feats), dim=1)
+                enh_feats = torch.cat((enh_feats, torch.zeros(1, 9)), dim=1)
+                # prom_feats = self.feats[cell][feat][chrom][prom_bin-10:prom_bin+11].view(1, -1)
+                prom_feats = self.feats[cell][feat][chrom][prom_bin-1:prom_bin+2].view(1, -1)
+                prom_feats = torch.cat((torch.zeros(1, 9), prom_feats), dim=1)
+                prom_feats = torch.cat((prom_feats, torch.zeros(1, 9)), dim=1)
+                if enh_feats.size() != prom_feats.size():
+                    print(enh_feats.size(), prom_feats.size(), start_bin, stop_bin, enh_bin, prom_bin)
                 # print(enh_feats.size())
                 # print(prom_feats.size())
                 cat_feats = torch.cat((enh_feats, prom_feats), dim=1)
