@@ -144,10 +144,6 @@ class TransEPI(nn.Module):
         if fc[-1] != 1:
             fc.append(1)
 
-        # 確認
-        # print(f"check fc_list: {fc}") # [128, 64(no batch_size), 1]
-        # print(f"check cnn channels: {cnn_channels}") # [180]
-
         self.fc = nn.ModuleList()
         self.fc.append(
                 nn.Sequential(
@@ -187,32 +183,11 @@ class TransEPI(nn.Module):
             length = None
         div = 1
 
-        # ___以下追加____
-        # B, _ = enh_idx.size()
-
-        # print("\n")      
-        # for i in range(B):
-        #     print(enh_idx[i].item(), end=" ")
-        # print("\n")
-        # for i in range(B):
-        #     print(prom_idx[i].item(), end=" ")
-        # print("\n")
-        # ______
-
         for cnn in  self.cnn:
             div *= cnn[-1].kernel_size
             enh_idx = torch.div(enh_idx, cnn[-1].kernel_size, rounding_mode="trunc")
             prom_idx = torch.div(prom_idx, cnn[-1].kernel_size, rounding_mode="trunc")
             feats = cnn(feats)
-
-        # ___以下追加____       
-        # for i in range(B):
-        #     print(enh_idx[i].item(), end=" ")
-        # print("\n")
-        # for i in range(B):
-        #     print(prom_idx[i].item(), end=" ")
-        # print("\n")
-        # ______
 
         feats = feats.transpose(1, 2) # -> (B, S, D)
         batch_size, seq_len, feat_dim = feats.size()
@@ -253,12 +228,8 @@ class TransEPI(nn.Module):
         # feats = torch.cat((feats.max(dim=1)[0].squeeze(1), feats.mean(dim=1).squeeze(1)), dim=1)
         dists = self.fc_dist(seq_embed)
 
-        # このタイミングでseq_embedがt-SNEにつかう要素となりそう
-        # 確認
-        # print(f"batch_size: {batch_size}") # 64
-        # print(f"vector size before FC: {seq_embed.size()}") # (batch_size, 720)
 
-        # TODO
+        # TODO　これいらない　消す
         if save_final_feat == True:
             seq_embed_list = seq_embed.tolist()
             dir_path = os.path.join(os.path.dirname(__file__), "..", "feat_before_sigmoid", research_name)
@@ -270,7 +241,7 @@ class TransEPI(nn.Module):
         for fc in self.fc:
             seq_embed = fc(seq_embed)
 
-
+        # TODO return_att はdefault False??
         if return_att:
             return seq_embed, dists, att
         else:
@@ -280,163 +251,6 @@ class TransEPI(nn.Module):
     def l2_matrix_norm(self, m):                                                                                        
         return torch.sum(torch.sum(torch.sum(m**2, 1), 1)**0.5).type(torch.cuda.DoubleTensor)
 
-
-
-# class TransformerModule(nn.Module):
-#     def __init__(self, in_dim: int, 
-#             cnn_channels: List[int], cnn_sizes: List[int], cnn_pool: List[int],
-#             enc_layers: int, num_heads: int, d_inner: int, **kwargs):
-#         super(TransformerModule, self).__init__()
-# 
-#         self.cnn = nn.ModuleList()
-#         self.cnn.append(
-#                 nn.Sequential(
-#                     nn.Conv1d(
-#                         in_channels=in_dim, 
-#                         out_channels=cnn_channels[0], 
-#                         kernel_size=cnn_sizes[0], 
-#                         padding=cnn_sizes[0] // 2),
-#                     nn.BatchNorm1d(cnn_channels[0]),
-#                     nn.LeakyReLU(),
-#                     nn.MaxPool1d(cnn_pool[0])
-#                 )
-#             )
-#         for i in range(len(cnn_sizes) - 1):
-#             self.cnn.append(
-#                     nn.Sequential(
-#                         nn.Conv1d(
-#                             in_channels=cnn_channels[i], 
-#                             out_channels=cnn_channels[i + 1], 
-#                             kernel_size=cnn_sizes[i + 1],
-#                             padding=cnn_sizes[i + 1] // 2),
-#                         nn.BatchNorm1d(cnn_channels[i + 1]),
-#                         nn.LeakyReLU(),
-#                         nn.MaxPool1d(cnn_pool[i + 1])
-#                 )
-#             )
-# 
-#         enc_layer = nn.TransformerEncoderLayer(
-#                 d_model=cnn_channels[-1],
-#                 nhead=num_heads,
-#                 dim_feedforward=d_inner
-#             )
-#         self.encoder = nn.TransformerEncoder(
-#                 enc_layer,
-#                 num_layers=enc_layers
-#                 )
-# 
-#     def forward(self, feats):
-#         # feats: (B, D, S)
-#         for cnn in  self.cnn:
-#             feats = cnn(feats)
-#         feats = feats.transpose(1, 2)
-#         feats = self.encoder(feats)
-#         return feats
-# 
-# 
-
-
-# class EncoderLayer(nn.Module):
-#     def __init__(self, d_model, d_inner, n_head, dropout=0.1):
-#         super(EncoderLayer, self).__init__()
-#         self.slf_att = SelfAttention(dim=d_model, causal=True, heads=n_head)
-#         self.pos_ffn = PositionwiseFeedForward(d_model, d_inner, dropout)
-# 
-#     def forward(self, enc_input):
-#         enc_input = self.slf_att(enc_input)
-#         enc_input = self.pos_ffn(enc_input)
-#         return enc_input
-# 
-# 
-# class Encoder(nn.Module):
-#     def __init__(self, n_layers, n_head, d_model, d_inner, dropout=0.1):
-#         super(Encoder, self).__init__()
-#         self.dropout = nn.Dropout(p=dropout)
-#         self.layer_stack = nn.ModuleList(
-#                 [EncoderLayer(d_model, d_inner, n_head, dropout=dropout) for _ in range(n_layers)]
-#             )
-#         self.layer_norm = nn.LayerNorm(d_model, eps=1E-6)
-#         self.d_model = d_model
-# 
-#     def forward(self, seq):
-#         seq = self.dropout(seq)
-#         # seq = self.layer_norm(seq)
-#         for layer in self.layer_stack:
-#             seq = layer(seq)
-#         return seq
-
-
-# class PerformerModel(nn.Module):
-#     def __init__(self, in_dim: int, 
-#             cnn_channels: List[int], cnn_sizes: List[int], cnn_pool: List[int],
-#             enc_layers: int, num_heads: int, d_inner: int,
-#             fc: List[int], fc_dropout: float,
-#             **kwargs):
-#         super(PerformerModel, self).__init__()
-# 
-#         self.cnn = nn.ModuleList()
-#         self.cnn.append(
-#                 nn.Sequential(
-#                     nn.Conv1d(
-#                         in_channels=in_dim, 
-#                         out_channels=cnn_channels[0], 
-#                         kernel_size=cnn_sizes[0], 
-#                         padding=cnn_sizes[0] // 2),
-#                     nn.BatchNorm1d(cnn_channels[0]),
-#                     nn.LeakyReLU(),
-#                     nn.MaxPool1d(cnn_pool[0])
-#                 )
-#             )
-#         for i in range(len(cnn_sizes) - 1):
-#             self.cnn.append(
-#                     nn.Sequential(
-#                         nn.Conv1d(
-#                             in_channels=cnn_channels[i], 
-#                             out_channels=cnn_channels[i + 1], 
-#                             kernel_size=cnn_sizes[i + 1],
-#                             padding=cnn_sizes[i + 1] // 2),
-#                         nn.BatchNorm1d(cnn_channels[i + 1]),
-#                         nn.LeakyReLU(),
-#                         nn.MaxPool1d(cnn_pool[i + 1])
-#                 )
-#             )
-# 
-#         self.performer_encoder = Encoder(
-#                 n_layers=enc_layers, 
-#                 d_model=cnn_channels[-1], 
-#                 n_head=num_heads,
-#                 d_inner=d_inner
-#             )
-# 
-#         if fc[-1] != 1:
-#             fc.append(1)
-#         self.fc = nn.ModuleList()
-#         self.fc.append(
-#                 nn.Sequential(
-#                     nn.Dropout(p=fc_dropout),
-#                     nn.Linear(cnn_channels[-1] * 2, fc[0])
-#                 )
-#             )
-#         for i in range(len(fc) - 1):
-#             self.fc.append(
-#                     nn.Sequential(
-#                         nn.ReLU(),
-#                         nn.Linear(fc[i], fc[i + 1])
-#                     )
-#                 )
-#         self.fc.append(nn.Sigmoid())
-# 
-# 
-#     def forward(self, feats):
-#         # feats: (B, D, S)
-#         for cnn in  self.cnn:
-#             feats = cnn(feats)
-#         feats = feats.transpose(1, 2)
-#         feats = self.performer_encoder(feats)
-#         feats = torch.cat((feats.max(dim=1)[0].squeeze(1), feats.mean(dim=1).squeeze(1)), dim=1)
-#         for fc in self.fc:
-#             feats = fc(feats)
-#         return feats
 
 
 
