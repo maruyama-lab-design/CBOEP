@@ -11,21 +11,14 @@ import argparse
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn import svm
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import f1_score
+import sklearn.metrics as mt
 
 import warnings, json, gzip
-
-from torch import Size
-
-
-from line_notify import line_notify
 
 INF = 9999999999
 
 def get_classifier(args):
-	return GradientBoostingClassifier(n_estimators = args.tree, learning_rate = args.alpha, max_depth = args.depth, max_features ='log2', random_state = args.seed, verbose=1)
-	# return svm.SVC(kernel='linear', random_state=0, probability=True)
-	# return LogisticRegression(penalty='l2', solver="sag")
+	return GradientBoostingClassifier(n_estimators = args.gbdt_tree, learning_rate = args.gbdt_alpha, max_depth = args.gbdt_depth, max_features ='log2', random_state = 2023, verbose=1)
 
 
 def get_weights(y):
@@ -47,8 +40,7 @@ def train(args, df):
 
 	_nonpredictors = ["bin","enhancer_chrom","enhancer_distance_to_promoter","enhancer_end","enhancer_name","enhancer_start","label","promoter_chrom","promoter_end","promoter_name","promoter_start","window_end","window_start","window_chrom","window_name","interactions_in_window","active_promoters_in_window"]
 	nonpredictors = [f for f in _nonpredictors if f in df.columns]
-	train_chroms=["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18"]
-
+	train_chroms = args.train_chroms
 
 
 	train_df = df[df["enhancer_chrom"].isin(train_chroms)]
@@ -69,13 +61,15 @@ def train(args, df):
 def test(args, classifier, df):
 	_nonpredictors = ["bin","enhancer_chrom","enhancer_distance_to_promoter","enhancer_end","enhancer_name","enhancer_start","label","promoter_chrom","promoter_end","promoter_name","promoter_start","window_end","window_start","window_chrom","window_name","interactions_in_window","active_promoters_in_window"]
 	nonpredictors = [f for f in _nonpredictors if f in df.columns]
-	test_chroms=["chr19", "chr20", "chr21", "chr22", "chrX"]
+	test_chroms = args.test_chroms
 
 	metrics = {
-		"F1": {},
+		"MCC": -99,
+		"balanced accuracy": -99,
+		"F1": -99
 	}
 
-	output_path = os.path.join(args.outdir, args.outname + ".csv")
+	output_path = os.path.join(args.outdir, args.outname)
 	test_df = df[df["enhancer_chrom"].isin(test_chroms)]
 
 	x_test = test_df.drop(columns=nonpredictors).values
@@ -94,135 +88,90 @@ def test(args, classifier, df):
 	)
 	result_df.to_csv(output_path)
 
-	result_df.loc[result_df["y_pred"] > 0.5, "y_pred"] = 1
-	result_df.loc[result_df["y_pred"] <= 0.5, "y_pred"] = 0
-	print(f"F : {f1_score(y_test, result_df['y_pred'].tolist())}")
+	true = df["y_test"].to_list()
+	prob = df["y_pred"].to_list()
+	pred =  list(map(round, prob))
+	metrics["F1"] = mt.f1_score(true, pred)
+	metrics["balanced accuracy"] = mt.balanced_accuracy_score(true, pred)
+	metrics["MCC"] = mt.matthews_corrcoef(true, pred)
 
-
-def datalist_to_dataframe(data_list):
-	row_size = 0
-	column_size = 0
-	df_list = []
-	for data in data_list:
-		df_tmp = pd.read_csv(data, sep=",")
-		row_size += len(df_tmp)
-		# if column_size == 0:
-		# 	column_size = len(df_tmp.columns)
-		# else:
-		# 	assert column_size == len(df_tmp.columns)
-		df_list.append(df_tmp)
-	df = pd.concat(df_list)
-	assert len(df) == row_size
-	df = df.fillna(0)
-	# print(df.head())
-	return df
-
+	print(metrics)
 
 
 def get_args():
 	p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-	p.add_argument("--dataname")
-	p.add_argument("--datatype")
-	# p.add_argument('-o', "--outdir", required=True, help="Output directory")
-	p.add_argument("--outdir", help="Output directory")
-	p.add_argument("--tree", type=int, default=4000, help="number of trees")
-	p.add_argument("--depth", type=int, default=25, help="number of depth")
-	p.add_argument("--alpha", type=float, default=0.001, help="learning rate")
-	p.add_argument("--region", default="epw")
-	p.add_argument("--outname", help="Output filename")
-	p.add_argument('--seed', type=int, default=2020, help="Random seed")
-
+	p.add_argument("--data", default="BENGI")
+	p.add_argument("--NIMF_max_d", type=int, default=2500000)
+	p.add_argument("--use_window", type=bool, default=True)
+	p.add_argument("--train_cell", default="GM12878")
+	p.add_argument("--test_cell", default="GM12878")
+	p.add_argument("--train_chroms")
+	p.add_argument("--test_chroms")
+	p.add_argument("--gbdt_tree", type=int, default=1500)
+	p.add_argument("--gbdt_depth", type=int, default=10)
+	p.add_argument("--gbdt_alpha", type=float, default=0.01)
+	p.add_argument("--outdir", default="prediction")
+	p.add_argument("--outname", default="result.csv")
+	
 	return p
 
 
 if __name__ == "__main__":
 	p = get_args()
 	args = p.parse_args()
-	np.random.seed(args.seed)
 
-	config = json.load(open(os.path.join(os.path.dirname(__file__), "opt.json")))
+	config = json.load(open(os.path.join(os.path.dirname(__file__), "main_opt.json")))
+	args.data = config["data"]
+	args.NIMF_max_d = config["NIMF_max_d"]
+	args.use_window = config["use_window"]
+	args.train_cell = config["train_opt"]["train_cell"]
+	args.test_cell = config["train_opt"]["test_cell"]
+	args.train_chroms = config["train_opt"]["train_chroms"]
+	args.test_chroms = config["train_opt"]["test_chroms"]
+	args.gbdt_tree = config["model_opt"]["gbdt_tree"]
+	args.gbdt_depth = config["model_opt"]["gbdt_depth"]
+	args.gbdt_alpha = config["model_opt"]["gbdt_alpha"]
 
-	# TODO
+	if args.NIMF_max_d == -1: # original TargetFinder (or BENGI)
+		if args.use_window:
+			args.outdir = os.path.join(os.path.dirname(__file__), config["outdir"], args.data, f"original", "epw")
+			train_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "featured_pair_data", args.data, f"original", "epw", f"{args.train_cell}.csv"))
+			test_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "featured_pair_data", args.data, f"original", "epw", f"{args.test_cell}.csv"))
+		else:
+			args.outdir = os.path.join(os.path.dirname(__file__), config["outdir"], args.data, f"original", "ep")
+			train_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "featured_pair_data", args.data, f"original", "ep", f"{args.train_cell}.csv"))
+			test_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "featured_pair_data", args.data, f"original", "ep", f"{args.test_cell}.csv"))
+	else: # NIMF
+		if args.use_window:
+			args.outdir = os.path.join(os.path.dirname(__file__), config["outdir"], args.data, f"NIMF_{args.NIMF_max_d}", "epw")
+			train_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "featured_pair_data", args.data, f"NIMF_{args.NIMF_max_d}", "epw", f"{args.train_cell}.csv"))
+			test_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "featured_pair_data", args.data, f"NIMF_{args.NIMF_max_d}", "epw", f"{args.test_cell}.csv"))
+		else:
+			args.outdir = os.path.join(os.path.dirname(__file__), config["outdir"], args.data, f"NIMF_{args.NIMF_max_d}", "ep")
+			train_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "featured_pair_data", args.data, f"NIMF_{args.NIMF_max_d}", "ep", f"{args.train_cell}.csv"))
+			test_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "featured_pair_data", args.data, f"NIMF_{args.NIMF_max_d}", "ep", f"{args.test_cell}.csv"))
+	args.outname = f"{args.train_cell}-{args.test_cell},{args.gbdt_tree}-{args.gbdt_depth}-{args.gbdt_alpha}.csv"
+	print(args)
 
-	for dataname in ["TargetFinder", "BENGI"]:
-		for datatype in ["original", "maxflow_2500000", "maxflow_5000000", "maxflow_10000000", f"maxflow_{INF}"]:
-			for region in ["ep"]:
-				for test_cl in ["GM12878", "HeLa", "K562", "NHEK", "IMR90"]:
-					# for config_file in glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), "config_dataset", "*.json")):
-					for tree in [1500]:
-						for depth in [25]:
-							for alpha in [0.001]:
+	if not os.path.exists(args.outdir):
+		os.makedirs(args.outdir, exist_ok=True)
 
-								train_cl = "GM12878"
-								train_data_list = glob(os.path.join(os.path.dirname(__file__), "data", args.region, "w_feature", dataname, datatype, f"{train_cl}*.csv"))
-								if len(train_data_list) == 0:
-									continue
-								train_df = datalist_to_dataframe(train_data_list)
+	# match feature order in train and test
+	train_columns = set(list(train_df.columns))
+	test_columns = set(list(test_df.columns))
+	print(f"train columns: {len(train_columns)}")
+	print(f"test columns: {len(test_columns)}")
+	union_columns = train_columns | test_columns
+	print(f"union columns: {len(union_columns)}")
+	train_df[list(union_columns - train_columns)] = 0
+	test_df[list(union_columns - test_columns)] = 0
+	train_df = train_df[list(test_df.columns)]
 
-								args.dataname = dataname
-								args.datatype = datatype
-								args.region = region
-								args.tree = tree
-								args.depth = depth
-								args.alpha = alpha
+	assert list(train_df.columns) == list(test_df.columns), "feature order error"
 
+	classifier = train(args, train_df) # train
+	test(args, classifier, test_df) # test
 
-
-								# config = json.load(open(args.config))
-
-								# args.outname = os.path.basename(os.path.splitext(args.config)[0])
-								args.outname = train_cl + "-" + test_cl
-								args.outname += f",{args.tree}"
-								args.outname += f",{args.depth}"
-								args.outname += f",{args.alpha}"
-
-
-								# data_list = config["datasets"]
-								test_data_list = glob(os.path.join(os.path.dirname(__file__), "data", args.region, "w_feature", dataname, datatype, f"{test_cl}*.csv"))
-								if len(test_data_list) == 0:
-									continue
-								test_df = datalist_to_dataframe(test_data_list)
-
-								args.outdir = f"./output/cell_type_wise({args.region})/{args.dataname}_{args.datatype}"
-								# args.outdir = config["outdir"]
-
-								if not os.path.exists(args.outdir):
-									os.makedirs(args.outdir, exist_ok=True)
-
-								# if os.path.exists(os.path.join(args.outdir, args.outname + ".csv")):
-								# 	print(f'{os.path.join(args.outdir, args.outname + ".csv")} has already exsisted!!')
-								# 	continue
-								
-
-								# holdout(args, df)
-
-								train_columns = set(list(train_df.columns))
-								test_columns = set(list(test_df.columns))
-								print(f"train columns: {len(train_columns)}")
-								print(f"test columns: {len(test_columns)}")
-								union_columns = train_columns | test_columns
-								print(f"union columns: {len(union_columns)}")
-								train_df[list(union_columns - train_columns)] = 0
-								test_df[list(union_columns - test_columns)] = 0
-
-								train_df = train_df[list(test_df.columns)]
-
-								if list(train_df.columns) != list(test_df.columns):
-									print("error")
-									exit()
-
-								try:
-									start_txt = f"開始 args: {args}"
-									line_notify(start_txt)
-									classifier = train(args, train_df)
-									test(args, classifier, test_df)
-								except Exception as e:
-									line_notify(e)
-									text = f"{args.dataname} {args.datatype} {test_cl} error!!"
-									line_notify(text)
-								else:
-									text = f"TargetFinder tool:\n{args.dataname} {args.datatype} {test_cl}\ntree={args.tree} depth={args.depth} alpha={args.alpha} finished!!"
-									line_notify(text)
 
 
 
