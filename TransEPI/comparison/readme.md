@@ -1,2 +1,0 @@
-- Features of TargetFinder and 3DPredictor
-- The datasets used to compare TransEPI with ChINN
