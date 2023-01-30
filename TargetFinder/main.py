@@ -88,8 +88,8 @@ def test(args, classifier, df):
 	)
 	result_df.to_csv(output_path)
 
-	true = df["y_test"].to_list()
-	prob = df["y_pred"].to_list()
+	true = result_df["y_test"].to_list()
+	prob = result_df["y_pred"].to_list()
 	pred =  list(map(round, prob))
 	metrics["F1"] = mt.f1_score(true, pred)
 	metrics["balanced accuracy"] = mt.balanced_accuracy_score(true, pred)
