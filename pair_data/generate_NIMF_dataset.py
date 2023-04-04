@@ -159,7 +159,6 @@ def maxflow(args):
 
 
 def get_range_from_name(name):
-	# name = chr6:226523-228463|GM12878|EH37E0821432
 	start, end = name.split("|")[1].split(":")[1].split("-")
 	return int(start), int(end)
 
@@ -214,6 +213,8 @@ def concat_NIMFnegative_and_positive(args):
 	# save
 	out_path = os.path.join(args.outdir, f"{args.cell_type}.csv")
 	new_dataset.to_csv(out_path, index=False)
+
+
 
 
 def make_new_dataset(args):
