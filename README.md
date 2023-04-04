@@ -1,63 +1,35 @@
 # NIMF (Negative Interaction by Maximum Flow)
 
-### Generation of negative enhancer-promoter interactions 
+The codes and datasets for "paper url".
+This repository contains three directories, `/pair_data`, `/TransEPI`, and `/TargetFinder`.  
 
-The main script is extended_region_research/main.py.
+In `/pair_data`,
+we include the BENGI dataset ,TargetFinder dataset and NIMF dataset (d_max=2.5M) for each of them.
+In addition to this, you can generate the NIMF dataset of any d_max.  
 
-### Libraries 
----
-
-| Library | Version |
-| :---: | :---: |
-| ```pandas``` | TD |
-| ```numpy``` | TD |
-| ```biopython``` | TD |
-| ```gensim``` | TD |
-| ```pybedtools``` | TD |
-| ```sklearn``` | TD |
-| `````` | TD |
-| `````` | TD |
-| `````` | TD |
-| `````` | TD |
-| `````` | TD |
+In `/TransEPI` or `/TargetFinder`,
+you can perform EPI prediction with existing EPI predictors, "TransEPI" or "TargetFinder".  
+For more information on each predictor, see the following papers.  
+- TransEPI: [Capturing large genomic contexts for accurately predicting enhancer-promoter interactions](https://academic.oup.com/bib/article-abstract/23/2/bbab577/6513727?redirectedFrom=fulltext&login=false)  
+- TargetFinder: [Enhancer-promoter interactions are encoded by complex genomic signatures on looping chromatin](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4910881/)  
 
 
-### Directory structure
----
+Details of the directory structure are as follows.
 
 ```
-data_root_path 
-├── bed  
-│   ├── enhancer  
-│   └── promoter  
-├── fasta  
-│   ├── enhancer  
-│   └── promoter  
-├── reference_genome  
-├── d2v  
-├── train  
-├── result  
-└── log  
-
-
-
-extended_reginon_research  
-├── main.py  
-├── make_directory.py  
-├── data_download.py  
-├── data_processing.py  
-├── my_doc2vec.py  
-├── train_classifier.py  
-├── t_sne.py  
-├── make_args_logfile.py  
-└── utils.py  
+NIMF
+├── pair_data
+│   ├── BENGI
+│   ├── TargetFinder
+│   └── generate_NIMF_dataset.py  
+├── TransEPI
+│   ├──   
+│   └── main.py  
+└── TargetFinder
+    ├──   
+    └── main.py  
 ```
 
-### Argument
----
 
-| argument | default value | description |
-| :---: | :---: | ---- |
-| ```--data``` |||
 
 
