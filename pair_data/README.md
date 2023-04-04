@@ -9,10 +9,19 @@ are contains in
 - `/BENGI/original/{cell type}.csv`
 - `/TargetFinder/original/{cell type}.csv`
 
-.
+respectively.
 
-## How to generate new NIMF data
-`generate_NIMF_dataset.py` is the executable file to create NIMF data.
+## How to generate new NIMF dataset
+`generate_NIMF_dataset.py` is the executable file to generate NIMF dataset.  
+
+### Libraries 
+---
+
+| Library | Version |
+| :---: | :---: |
+| ```pandas``` | 1.3.4 |
+| ```pulp``` | 2.6.0 |
+
 
 ### Argument
 ---
@@ -33,4 +42,5 @@ Example of `NIMF_opt.json`:
 }
 ```
 
-
+NIMF dataset is generated in
+- `/{--data}/NIMF_{--NIMF_max_d}/{--cell_type}.csv`
