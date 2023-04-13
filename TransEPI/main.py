@@ -71,44 +71,36 @@ def predict(model: nn.Module, data_loader: DataLoader, device=torch.device('cuda
     return (result.squeeze(), true_label.squeeze(), result_dist.squeeze(), true_dist.squeeze())
 
 
-def train(
+def hold_out(
         model_class, model_params, 
         optimizer_class, optimizer_params, 
-        dataset, groups, n_folds, 
+        dataset, groups,
         num_epoch, patience, batch_size, num_workers,
-        outdir, checkpoint_prefix, device, 
+        outdir, model_name, checkpoint_prefix, device, 
         train_chroms, valid_chroms,
-        use_scheduler=False,
-        use_mse=True,
-        research_name=None) -> nn.Module:
-    bce_loss = nn.BCELoss() # binary cross entropy?
-    mse_loss = nn.MSELoss() # 平均二乗誤差？
-    # splitter = GroupKFold(n_splits=n_folds) # 染色体単位にする準備
+        use_scheduler=False,) -> nn.Module:
+
+    bce_loss = nn.BCELoss() # binary cross entropy
 
     wait = 0
     best_epoch, best_val_auc, best_val_aupr = -999, -999, -999
     best_loss = 999
     epoch_results = {"AUC": list(), "AUPR": list()}
 
+    loss_dict = {"epochs": [], "train_loss": [], "valid_loss": []}
+    train_idx, valid_idx = [], []
 
-    loss_dict = {"epochs": [], "fold": [], "train_loss": [], "valid_loss": []}
-    learning_rates = [] 
-    train_idx, valid_idx, test_idx = [], [], []
     for epoch_idx in range(num_epoch):
 
         epoch_results["AUC"] = 0
         epoch_results["AUPR"] = 0
+
         if epoch_idx == 0:
-            print("Fold splits(validation): ")
-            # for fold_idx, (train_idx, valid_idx) in enumerate(splitter.split(X=groups, groups=groups)): # 染色体単位で分けてくれる
-            #     print("  - Fold{}: validation size:{}({}) training size:{}({})".format(fold_idx, len(valid_idx), misc_utils.count_unique_itmes(groups[valid_idx]), len(train_idx), misc_utils.count_unique_itmes(groups[train_idx])))
             for idx, chrom in enumerate(groups):
                 if chrom in train_chroms:
                     train_idx.append(idx)
                 elif chrom in valid_chroms:
                     valid_idx.append(idx)
-                # elif chrom in test_chroms:
-                #     test_idx.append(idx)
             print("  - validation size:{}({}) training size:{}({})".format(len(valid_idx), misc_utils.count_unique_itmes(groups[valid_idx]), len(train_idx), misc_utils.count_unique_itmes(groups[train_idx])))
 
                 
@@ -116,14 +108,14 @@ def train(
         print("\nCV epoch: {}/{}\t({})".format(epoch_idx, num_epoch, time.asctime()))
         
         # ___holdout___
-        modeldir = os.path.join(os.path.dirname(outdir), "model", os.path.basename(outdir))
+        modeldir = os.path.join(os.path.dirname(__file__), outdir, "model", model_name)
         os.makedirs(modeldir, exist_ok = True)
         
         with open(os.path.join(modeldir, "log.txt"), "a") as f:
             print("  epochs{}: validation size:{}({}) training size:{}({})".format(epoch_idx, len(valid_idx), misc_utils.count_unique_itmes(groups[valid_idx]), len(train_idx), misc_utils.count_unique_itmes(groups[train_idx])), file=f)
 
         train_loader = DataLoader(Subset(dataset, indices=train_idx), shuffle=True, batch_size=batch_size, num_workers=num_workers)
-        sample_idx = np.random.permutation(train_idx)[0:1024] # train から ランダムに1024個抽出
+        sample_idx = np.random.permutation(train_idx)[0:1024]
         sample_loader = DataLoader(Subset(dataset, indices=sample_idx), shuffle=False, batch_size=batch_size, num_workers=num_workers)
         valid_loader = DataLoader(Subset(dataset, indices=valid_idx), shuffle=False, batch_size=batch_size, num_workers=num_workers)
         checkpoint = "{}/{}.pt".format(modeldir, checkpoint_prefix)
@@ -140,23 +132,17 @@ def train(
             scheduler.load_state_dict(state_dict["scheduler_state_dict"])
 
         model.train()
-        for feats, dists, enh_idxs, prom_idxs, labels in tqdm.tqdm(train_loader): # train...
+        for feats, dists, enh_idxs, prom_idxs, labels in tqdm.tqdm(train_loader): # train by batch
 
-            feats, dists, labels = feats.to(device), dists.to(device), labels.to(device) # それぞれbatch_size分のtensor
-            if hasattr(model, "att_C"):
+            feats, dists, labels = feats.to(device), dists.to(device), labels.to(device)
+            if hasattr(model, "att_C"): # TODO
                 pred, pred_dists, att = model(feats, return_att=True, enh_idx=enh_idxs, prom_idx=prom_idxs)
-                # pred = model(feats, enh_idx=enh_idxs, prom_idx=prom_idxs)
                 attT = att.transpose(1, 2)
                 identity = torch.eye(att.size(1)).to(device)
                 identity = Variable(identity.unsqueeze(0).expand(labels.size(0), att.size(1), att.size(1)))
                 penal = model.l2_matrix_norm(torch.matmul(att, attT) - identity)
 
-                # edit loss...
-                loss = None
-                if use_mse == True:
-                    loss = bce_loss(pred, labels) + (model.att_C * penal / labels.size(0)).type(torch.cuda.FloatTensor) + mse_loss(dists, pred_dists)
-                else:
-                    loss = bce_loss(pred, labels) + (model.att_C * penal / labels.size(0)).type(torch.cuda.FloatTensor)
+                loss = bce_loss(pred, labels) + (model.att_C * penal / labels.size(0)).type(torch.cuda.FloatTensor)
 
                 del penal, identity
             else:
@@ -165,13 +151,11 @@ def train(
 
             optimizer.zero_grad()
             loss.backward()
-            optimizer.step() # 重みの更新 validation は使っていない
+            optimizer.step()
 
 
-            # batch処理終了
 
-        # 次のepochのための準備
-        learning_rates.append(optimizer.param_groups[0]["lr"])
+        # prepare for next epoch
         if use_scheduler:
             scheduler.step()
 
@@ -179,15 +163,13 @@ def train(
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
             "scheduler_state_dict": scheduler.state_dict()
-            }, checkpoint)
+        }, checkpoint)
 
-        # ___以下追加（全てのepochsを保存）___
         torch.save({
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
             "scheduler_state_dict": scheduler.state_dict()
-            }, os.path.join(modeldir, f"epoch{epoch_idx}.pt"))
-        # ______
+        }, os.path.join(modeldir, f"epoch{epoch_idx}.pt"))
 
         model.eval()
         train_loss, valid_loss = None, None
@@ -195,19 +177,14 @@ def train(
         tra_AUC, tra_AUPR, tra_F1, tra_pre, tra_rec, tra_MCC = misc_utils.evaluator(train_true, train_pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
         valid_pred, valid_true, valid_pred_dist, valid_true_dist = predict(model, valid_loader)
         val_AUC, val_AUPR, val_F1, val_pre, val_rec, val_MCC = misc_utils.evaluator(valid_true, valid_pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
-        if use_mse == True:
-            train_loss = metrics.log_loss(train_true, train_pred) + metrics.mean_squared_error(train_true_dist, train_pred_dist)
-            valid_loss = metrics.log_loss(valid_true, valid_pred) + metrics.mean_squared_error(valid_true_dist, valid_pred_dist)
-        else:
-            train_loss = metrics.log_loss(train_true, train_pred)
-            valid_loss = metrics.log_loss(valid_true, valid_pred)
+
+        train_loss = metrics.log_loss(train_true, train_pred)
+        valid_loss = metrics.log_loss(valid_true, valid_pred)
 
         log_tra_text = f"  - train...\nloss={train_loss:.4f}\tAUC={tra_AUC:.4f}\tAUPR={tra_AUPR:.4f}\tF1={tra_F1:.4f}\tpre={tra_pre:.4f}\trec={tra_rec:.4f}\tMCC={tra_MCC:.4f}\t"
         log_val_text = f"  - valid...\nloss={valid_loss:.4f}\tAUC={val_AUC:.4f}\tAUPR={val_AUPR:.4f}\tF1={val_F1:.4f}\tpre={val_pre:.4f}\trec={val_rec:.4f}\tMCC={val_MCC:.4f}\t"
-        #print("  - Fold{}:train(AUC/AUPR)/vald(AUC/AUPR):\t{:.4f}\t{:.4f}\t{:.4f}\t{:.4f}\t({})".format(fold_idx, tra_AUC, tra_AUPR, val_AUC, val_AUPR, time.asctime()))
         print(log_tra_text)
         print(log_val_text)
-
 
         with open(os.path.join(modeldir, "log.txt"), "a") as f:
             print(f"___epochs{epoch_idx}___", file=f)
@@ -242,51 +219,46 @@ def train(
             else:
                 print("Wait{} ({})".format(wait, time.asctime()))
 
-    # leaning rate を図に
-    plt.figure()
-    plt.plot(learning_rates)
-    plt.xlabel("epochs")
-    plt.ylabel("learning rate")
-    plt.savefig(os.path.join(modeldir, "learning_rate.png"))
 
-    # train loss vs valid loss
-    loss_df = pd.DataFrame.from_dict(loss_dict, orient='index').T
-    loss_df.to_csv(os.path.join(modeldir, "loss.csv"), index=False)
-
-    # load best model
+    # save best model
     print(f"best epoch is {best_epoch}")
     best_model_path = os.path.join(modeldir, f"epoch{best_epoch}.pt")
     shutil.copyfile(best_model_path, os.path.join(modeldir, f"best_epoch.pt"))
-    print(f"loaded epoch{best_epoch}.pt")
+
+    # print(f"loaded epoch{best_epoch}.pt")
+    # model = model_class(**model_params).to(device)
+    # optimizer = optimizer_class(model.parameters(), **optimizer_params)
+    # state_dict = torch.load(best_model_path)
+    # model.load_state_dict(state_dict["model_state_dict"])
+    # optimizer.load_state_dict(state_dict["optimizer_state_dict"])
+    # scheduler.load_state_dict(state_dict["scheduler_state_dict"])
+
+    # return model
+
+
+
+
+def test(model_class, model_params, 
+        optimizer_class, optimizer_params, 
+        dataset, groups, test_chroms, batch_size, num_workers, outpath, model_path):
+
+    print(f"loading {model_path}...")
     model = model_class(**model_params).to(device)
     optimizer = optimizer_class(model.parameters(), **optimizer_params)
-    state_dict = torch.load(best_model_path)
+    state_dict = torch.load(model_path)
     model.load_state_dict(state_dict["model_state_dict"])
     optimizer.load_state_dict(state_dict["optimizer_state_dict"])
-    scheduler.load_state_dict(state_dict["scheduler_state_dict"])
 
-    return model
-
-
-
-
-def test(dataset, groups, test_chroms, batch_size, num_workers, outpath, model):
     test_idx = []
     for idx, chrom in enumerate(groups):
         if chrom in test_chroms:
             test_idx.append(idx)
     test_loader = DataLoader(Subset(dataset, indices=test_idx), shuffle=False, batch_size=batch_size, num_workers=num_workers)
     model.eval()
-    # test_loss = None
-    test_pred, test_true, test_pred_dist, test_true_dist = predict(model, test_loader, save_final_feat=True, research_name=research_name)
+    test_pred, test_true, test_pred_dist, test_true_dist = predict(model, test_loader)
     AUC, AUPR, F_in, pre, rec, MCC = misc_utils.evaluator(test_true, test_pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
-    # if use_mse == True:
-    #     test_loss = metrics.log_loss(test_true, test_pred) + metrics.mean_squared_error(test_true_dist, test_pred_dist)
-    # else:
-    #     test_loss = metrics.log_loss(test_true, test_pred)
 
     np.savetxt(
-
             os.path.join(outpath),
             np.concatenate((
                 test_true.reshape(-1, 1).astype(int).astype(str),
@@ -298,7 +270,6 @@ def test(dataset, groups, test_chroms, batch_size, num_workers, outpath, model):
             header="true\tpred"
     )
 
-    # ___結果書き込み___
     
 
 
@@ -306,8 +277,6 @@ def test(dataset, groups, test_chroms, batch_size, num_workers, outpath, model):
 
 def get_args():
     p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    p.add_argument('-c', "--config", required=True, help="Configuration file for training the model")
-    p.add_argument('-o', "--outdir", required=True, help="Output directory")
     p.add_argument('--gpu', default=-1, type=int, help="GPU ID, (-1 for CPU)")
     p.add_argument('--seed', type=int, default=2020, help="Random seed")
 
@@ -325,138 +294,175 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
 
     # mse
-    args.use_mse = True
+    args.use_mse = False
     # ___
 
-    config = json.load(open(args.config))
+    config = json.load(open(os.path.join(os.path.dirname(__file__), "main_opt.json")))
 
 
     # args.test_on_another_data = True
-    dataname = config["dataname"]
-    datatype = config["datatype"]
-    train_cl = config["data_opts"]["train_cell_type"]
-    test_cl_list = config["data_opts"]["test_cell_type_list"]
-    config["data_opts"].pop("train_cell_type")
-    config["data_opts"].pop("test_cell_type_list")
-
-    config["data_opts"]["datasets"] = []
-
-    args.outdir = f"./../output/{dataname}_{datatype}"
-    root_outdir = args.outdir
-    for tr_cl in train_cl:
-        args.outdir = root_outdir + f"_{tr_cl}" # update outdir
-
-        config["data_opts"]["datasets"] = glob.glob(os.path.join(os.path.dirname(__file__), "..", "data", dataname, datatype, f"{tr_cl}*.tsv"))
-
-        print(config["data_opts"])
-
-        all_train_data = epi_dataset.EPIDataset(**config["data_opts"])
-        # all_train_data = epi_dataset_old.EPIDataset(**config["data_opts"])
-
-        config["model_opts"]["in_dim"] = all_train_data.feat_dim
-        config["model_opts"]["seq_len"] = config["data_opts"]["seq_len"] // config["data_opts"]["bin_size"]
-
-        print("##{}".format(time.asctime()))
-        print("##command: {}".format(' '.join(sys.argv)))
-        print("##config: {}".format(config))
-        print("##sample size: {}".format(len(all_train_data)))
-        torch.save(all_train_data.__getitem__(0), "tmp.pt")
+    train_file = config["train_opt"]["train_file"]
+    outdir = config["outdir"]
 
 
-        chroms = all_train_data.metainfo["chrom"]
+    all_train_data = epi_dataset.EPIDataset(
+        datasets=train_file,
+        feats_config=config["feats_config"],
+        feats_order=config["feats_order"], 
+        seq_len=config["seq_len"], 
+        bin_size=config["bin_size"], 
+        use_mark=False,
+        mask_neighbor=True, # TODO
+        mask_window=True, # TODO
+        sin_encoding=False,
+        rand_shift=False,
+    )
+
+    config["model_opts"]["in_dim"] = all_train_data.feat_dim
+    config["model_opts"]["seq_len"] = config["seq_len"] // config["bin_size"] # TODO
+
+    print("##{}".format(time.asctime()))
+    print("##command: {}".format(' '.join(sys.argv)))
+    print("##config: {}".format(config))
+    print("##sample size: {}".format(len(all_train_data)))
+    torch.save(all_train_data.__getitem__(0), "tmp.pt")
 
 
-        if args.gpu >= 0:
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
-            device = torch.device("cuda")
-        else:
-            device = torch.device('cpu')
-
-        model_class = getattr(epi_models, config["model_opts"]["model"])
-        model = model_class(**config["model_opts"])
-
-        del model
-        optimizer_params = {'lr': config["train_opts"]["learning_rate"], 'weight_decay': 1e-8}
-
-        # ___追加___
-        if config["train_opts"]["use_scheduler"] == False:
-            args.outdir += "_noScheduler"
-        
-        args.outdir += f"(lr={config['train_opts']['learning_rate']})"
-
-        if args.use_mse == False:
-            args.outdir += "_noMSE"
+    chroms = all_train_data.metainfo["chrom"]
 
 
-        if config["data_opts"]["mask_window"] or config["data_opts"]["mask_neighbor"]:
-            args.outdir += "_mask-"
-            if config["data_opts"]["mask_window"]:
-                args.outdir += "w"
-            if config["data_opts"]["mask_neighbor"]:
-                args.outdir += "n"
+    if args.gpu >= 0:
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
+        device = torch.device("cuda")
+    else:
+        device = torch.device('cpu')
 
-        if args.test_on_another_data == True:
-            args.outdir += "_useTest"
+    model_class = getattr(epi_models, config["model_opts"]["model"])
+    model = model_class(**config["model_opts"])
 
-        # args.outdir += "_old"
+    del model
+    optimizer_params = {'lr': config["train_opts"]["learning_rate"], 'weight_decay': 1e-8}
 
-        research_name = os.path.splitext(os.path.basename(args.config))[0]
-        print(f"research name: {research_name}")
-        # ___
+    # ___make model_name___
+    model_name = ""
+    
+    # mask??
+    if config["use_mask"] == True:
+        model_name += "masked_"
+    else:
+        model_name += "no_masked_"
 
-        if not os.path.isdir(args.outdir):
-            args.outdir = make_directory(args.outdir)
+    data, nimf, cell = config["train_opt"]["train_file"].remove(".csv").split("/")
+    # BENGI or TargetFinder ??
+    if data == "BENGI":
+        model_name += "BG_"
+    elif data == "TargetFinder":
+        model_name += "TF_"
+    else:
+        model_name += "OT_"
+    
+    # original or NIMF ??
+    if nimf == "original":
+        model_name += "org_"
+    elif nimf == "NIMF_9999999999":
+        model_name += "INF_"
+    else:
+        model_name += str(nimf.split("_")[-1]) + "_"
 
-        best_model = train(
-                model_class=model_class, 
-                model_params=config["model_opts"],
-                optimizer_class=torch.optim.Adam, 
-                optimizer_params=optimizer_params,
-                dataset=all_train_data,
-                groups=all_train_data.metainfo["chrom"],
-                n_folds=5,
-                num_epoch=config["train_opts"]["num_epoch"], 
-                patience=config["train_opts"]["patience"], 
-                batch_size=config["train_opts"]["batch_size"], 
-                num_workers=config["train_opts"]["num_workers"],
-                outdir=args.outdir, 
-                checkpoint_prefix="checkpoint",
-                device=device,
-                train_chroms=["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15"],
-                valid_chroms=["chr16", "chr17", "chr18"],
-                # test_chroms=["chr19", "chr20", "chr21", "chr22", "chrX"],
-                use_scheduler=config["train_opts"]["use_scheduler"],
-                # ___
-                use_mse = args.use_mse,
-                research_name=research_name
-                # ___
-            )
+    # which cell ??
+    model_name += cell
+    # ___
+
+    os.makedirs(outdir, exist_ok=True)
+
+    hold_out(
+            model_class=model_class, 
+            model_params=config["model_opts"],
+            optimizer_class=torch.optim.Adam, 
+            optimizer_params=optimizer_params,
+            dataset=all_train_data,
+            groups=all_train_data.metainfo["chrom"],
+            num_epoch=config["train_opts"]["num_epoch"], 
+            patience=config["train_opts"]["patience"], 
+            batch_size=config["train_opts"]["batch_size"], 
+            num_workers=config["train_opts"]["num_workers"],
+            outdir=outdir,
+            model_name=model_name,
+            checkpoint_prefix="checkpoint",
+            device=device,
+            train_chroms=config["train_opt"]["train_chroms"],
+            valid_chroms=config["train_opt"]["valid_chroms"],
+            use_scheduler=config["train_opts"]["use_scheduler"],
+        )
 
 
-        # exit()
 
 
-        # ___test___
-        
-        for te_cl in test_cl_list:
-            print(f"train on {tr_cl}, test on {te_cl}...")
+    # ___test___
+    test_file = config["train_opt"]["test_file"]
+    all_test_data = epi_dataset.EPIDataset(
+        datasets=test_file,
+        feats_config=config["feats_config"],
+        feats_order=config["feats_order"], 
+        seq_len=config["seq_len"], 
+        bin_size=config["bin_size"], 
+        use_mark=False,
+        mask_neighbor=True, # TODO
+        mask_window=True, # TODO
+        sin_encoding=False,
+        rand_shift=False,
+    )
 
-            # replace train data -> test data
-            if args.test_on_another_data == True:
-                config["data_opts"]["datasets"] = glob.glob(os.path.join(os.path.dirname(__file__), "..", "data", dataname, "test", f"{te_cl}*.tsv"))
-                all_test_data = epi_dataset.EPIDataset(**config["data_opts"])
-                # all_test_data = epi_dataset_old.EPIDataset(**config["data_opts"])
-            else:
-                config["data_opts"]["datasets"] = glob.glob(os.path.join(os.path.dirname(__file__), "..", "data", dataname, datatype, f"{te_cl}*.tsv"))
-                all_test_data = epi_dataset.EPIDataset(**config["data_opts"])
-                # all_test_data = epi_dataset_old.EPIDataset(**config["data_opts"])
 
-            test(
-                dataset=all_test_data,
-                groups=all_test_data.metainfo["chrom"],
-                test_chroms=["chr19", "chr20", "chr21", "chr22", "chrX"],
-                batch_size=config["train_opts"]["batch_size"], 
-                num_workers=config["train_opts"]["num_workers"],
-                outpath=os.path.join(args.outdir, f"{tr_cl}-{te_cl}_prediction.txt"),
-                model=best_model
-            )
+    # __make pred_name__
+    pred_name = ""
+    
+    # mask??
+    if config["use_mask"] == True:
+        pred_name += "masked_"
+    else:
+        pred_name += "no_masked_"
+
+    data, nimf, cell = config["train_opt"]["test_file"].remove(".csv").split("/")
+    # BENGI or TargetFinder ??
+    if data == "BENGI":
+        pred_name += "BG_"
+    elif data == "TargetFinder":
+        pred_name += "TF_"
+    else:
+        pred_name += "OT_"
+    
+    # original or NIMF ??
+    if nimf == "original":
+        pred_name += "org_"
+    elif nimf == "NIMF_9999999999":
+        pred_name += "INF_"
+    else:
+        pred_name += str(nimf.split("_")[-1]) + "_"
+
+    # which cell ??
+    pred_name += cell
+
+    pred_name += ".txt"
+    # ___
+
+
+    pred_path = os.path.join(
+        os.path.dirname(__file__), outdir, "model", model_name,
+        "prediction", pred_name
+    )
+    os.makedirs(os.path.dirname(pred_path), exist_ok=True)
+
+    test(
+        model_class=model_class, 
+        model_params=config["model_opts"],
+        optimizer_class=torch.optim.Adam, 
+        optimizer_params=optimizer_params,
+        dataset=all_test_data,
+        groups=all_test_data.metainfo["chrom"],
+        test_chroms=config["train_opt"]["test_chroms"],
+        batch_size=config["train_opts"]["batch_size"], 
+        num_workers=config["train_opts"]["num_workers"],
+        outpath=os.path.join(os.path.dirname(__file__), outdir, "model", model_name, ""),
+        model_path=os.path.join(os.path.dirname(__file__), outdir, "model", model_name, f"best_epoch.pt")
+    )
