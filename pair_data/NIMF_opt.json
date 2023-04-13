@@ -1,5 +1,5 @@
 {
-    "data": "BENGI",
-    "NIMF_max_d": 3000000,
+    "data": "TargetFinder",
+    "NIMF_max_d": 9999999999,
     "cell_type": "GM12878"
 }
