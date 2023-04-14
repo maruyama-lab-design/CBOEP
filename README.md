@@ -1,9 +1,14 @@
 # NIMF (Negative Interaction by Maximum Flow)
 
-The codes and datasets for "paper url".
-This repository contains three directories, `/pair_data`, `/TransEPI`, and `/TargetFinder`.  
+This repository contains files related to our work, NIMF, which generates a set of negative enhancer-promoter interactions (EPIs) from 
+a specified set of positive EPIs. 
 
-In `/pair_data`,
+
+
+
+This repository contains three directories, `pair_data`, `TransEPI`, and `TargetFinder`.  
+
+In the directory of 'pair_data',
 we include the BENGI dataset ,TargetFinder dataset and NIMF dataset (d_max=2.5M) for each of them.
 In addition to this, you can generate the NIMF dataset of any d_max.  
 
