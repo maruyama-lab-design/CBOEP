@@ -9,11 +9,13 @@ memo*
 *.csv
 !pair_data/BENGI/original/*.csv
 !pair_data/BENGI/NIMF_2500000/*.csv
-# !pair_data/BENGI/NIMF_10000000/*.csv
+!pair_data/BENGI/NIMF_5000000/*.csv
+!pair_data/BENGI/NIMF_10000000/*.csv
 !pair_data/BENGI/NIMF_9999999999/*.csv
 !pair_data/TargetFinder/original/*.csv
 !pair_data/TargetFinder/NIMF_2500000/*.csv
-# !pair_data/TargetFinder/NIMF_10000000/*.csv
+!pair_data/TargetFinder/NIMF_5000000/*.csv
+!pair_data/TargetFinder/NIMF_10000000/*.csv
 !pair_data/TargetFinder/NIMF_9999999999/*.csv
 *.fa
 *.fai
