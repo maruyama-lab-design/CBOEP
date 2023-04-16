@@ -152,7 +152,7 @@ def maxflow(args):
 
 		assert df.duplicated().sum() == 0
 
-		outdir = os.path.join(os.path.dirname(__file__), f"NIMF_{args.NIMF_max_d}", "bipartiteGraph", "result")
+		outdir = os.path.join(os.path.dirname(__file__), args.data, f"NIMF_{args.NIMF_max_d}", "bipartiteGraph", "result")
 		os.makedirs(outdir, exist_ok=True)
 		out_path = os.path.join(outdir, f"{args.cell_type}_{chrom}.csv")
 		df.to_csv(out_path, index=False)
@@ -178,7 +178,7 @@ def concat_NIMFnegative_and_positive(args):
 	negative_df = pd.DataFrame(columns=["enhancer_chrom", "promoter_chrom", "from", "to"])
 	chromList = [f"chr{i}" for i in list(range(1, 23)) + ["X"]]
 	for chrom in chromList:
-		maxflow_path = os.path.join(os.path.dirname(__file__), f"maxflow_{args.NIMF_max_d}", "bipartiteGraph", "result", f"{args.cell_type}_{chrom}.csv")
+		maxflow_path = os.path.join(os.path.dirname(__file__), args.data, f"NIMF_{args.NIMF_max_d}", "bipartiteGraph", "result", f"{args.cell_type}_{chrom}.csv")
 		if os.path.exists(maxflow_path) == False:
 			continue
 		maxflow_df = pd.read_csv(maxflow_path, usecols=["from", "to", "Val"])
@@ -201,8 +201,12 @@ def concat_NIMFnegative_and_positive(args):
 	negative_df["promoter_chrom"] = negative_df["enhancer_chrom"]
 	negative_df["enhancer_start"] = negative_df["enhancer_name"].map(get_range_from_name).map(lambda x: x[0])
 	negative_df["enhancer_end"] = negative_df["enhancer_name"].map(get_range_from_name).map(lambda x: x[1])
-	negative_df["promoter_start"] = negative_df["promoter_name"].map(get_range_from_name).map(lambda x: x[0]-1499)
-	negative_df["promoter_end"] = negative_df["promoter_name"].map(get_range_from_name).map(lambda x: x[1]+500)
+	if args.data == "BENGI":
+		negative_df["promoter_start"] = negative_df["promoter_name"].map(get_range_from_name).map(lambda x: x[0]-1499)
+		negative_df["promoter_end"] = negative_df["promoter_name"].map(get_range_from_name).map(lambda x: x[1]+500)
+	else:
+		negative_df["promoter_start"] = negative_df["promoter_name"].map(get_range_from_name).map(lambda x: x[0])
+		negative_df["promoter_end"] = negative_df["promoter_name"].map(get_range_from_name).map(lambda x: x[1])
 	negative_df["distance"] = abs(((negative_df["enhancer_start"] + negative_df["enhancer_end"]) / 2) - 
 	((negative_df["promoter_start"] + negative_df["promoter_end"]) / 2))
 
