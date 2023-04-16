@@ -244,9 +244,11 @@ if __name__ == "__main__":
 	args.NIMF_max_d = config["NIMF_max_d"]
 	assert args.NIMF_max_d > 0
 	args.cell_type = config["cell_type"]
+	print(f"data {args.data}")
+	print(f"max_d {args.NIMF_max_d}")
+	print(f"cell {args.cell_type}")
 	args.outdir = os.path.join(os.path.dirname(__file__), args.data, f"NIMF_{args.NIMF_max_d}")
 	os.makedirs(args.outdir, exist_ok=True)
-
 	make_new_dataset(args)
 
 
