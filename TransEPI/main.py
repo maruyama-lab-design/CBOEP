@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader, Subset
 import matplotlib.pyplot as plt
 
 import epi_models
-import epi_dataset, epi_dataset_old
+import epi_dataset
 import misc_utils
 
 
@@ -53,8 +53,9 @@ def predict(model: nn.Module, data_loader: DataLoader, device=torch.device('cuda
     for batch_idx, (feats, dists, enh_idxs, prom_idxs, labels) in enumerate(data_loader):
 
         feats, dists, labels = feats.to(device), dists.to(device), labels.to(device)
-        # enh_idxs, prom_idxs = feats.to(device), prom_idxs.to(device)
-        pred, pred_dist, att = model(feats, return_att=True, enh_idx=enh_idxs, prom_idx=prom_idxs, batch_idx=batch_idx, save_final_feat=save_final_feat, research_name=research_name)
+        # enh_idxs, prom_idxs = enh_idxs.to(device), prom_idxs.to(device)
+        pred, pred_dist, att = model(feats, return_att=True, enh_idx=enh_idxs, prom_idx=prom_idxs, batch_idx=batch_idx,
+                                     save_final_feat=save_final_feat, research_name=research_name)
         del att
         pred = pred.detach().cpu().numpy()
         labels = labels.detach().cpu().numpy()
@@ -253,21 +254,29 @@ def test(model_class, model_params,
     for idx, chrom in enumerate(groups):
         if chrom in test_chroms:
             test_idx.append(idx)
+    chroms = np.array(dataset.metainfo["chrom"])[test_idx]
+    distances = np.array(dataset.metainfo["dist"])[test_idx]
+    enh_names = np.array(dataset.metainfo["enh_name"])[test_idx]
+    prom_names = np.array(dataset.metainfo["prom_name"])[test_idx]
     test_loader = DataLoader(Subset(dataset, indices=test_idx), shuffle=False, batch_size=batch_size, num_workers=num_workers)
     model.eval()
     test_pred, test_true, test_pred_dist, test_true_dist = predict(model, test_loader)
-    AUC, AUPR, F_in, pre, rec, MCC = misc_utils.evaluator(test_true, test_pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
+    # AUC, AUPR, F_in, pre, rec, MCC = misc_utils.evaluator(test_true, test_pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
 
     np.savetxt(
             os.path.join(outpath),
             np.concatenate((
                 test_true.reshape(-1, 1).astype(int).astype(str),
                 test_pred.reshape(-1, 1).round(4).astype(str),
+                chroms.reshape(-1, 1),
+                distances.reshape(-1, 1).astype(int).astype(str),
+                enh_names.reshape(-1, 1),
+                prom_names.reshape(-1, 1)
             ), axis=1),
             delimiter='\t',
             fmt="%s",
             comments="",
-            header="true\tpred"
+            header="true\tpred\tchrom\tdistance\tenhancer_name\tpromoter_name"
     )
 
     
@@ -277,8 +286,9 @@ def test(model_class, model_params,
 
 def get_args():
     p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    p.add_argument('--gpu', default=-1, type=int, help="GPU ID, (-1 for CPU)")
+    p.add_argument('--gpu', default=1, type=int, help="GPU ID, (-1 for CPU)")
     p.add_argument('--seed', type=int, default=2020, help="Random seed")
+    p.add_argument('--config', type=str, default="main_opt.json", help="config filename")
 
     # 以下追加
     p.add_argument('--use_mse', action="store_true")
@@ -297,11 +307,11 @@ if __name__ == "__main__":
     args.use_mse = False
     # ___
 
-    config = json.load(open(os.path.join(os.path.dirname(__file__), "main_opt.json")))
+    config = json.load(open(os.path.join(os.path.dirname(__file__), args.config)))
 
 
     # args.test_on_another_data = True
-    train_file = config["train_opt"]["train_file"]
+    train_file = config["train_opts"]["train_file"]
     outdir = config["outdir"]
 
 
@@ -352,7 +362,9 @@ if __name__ == "__main__":
     else:
         model_name += "no_masked_"
 
-    data, nimf, cell = config["train_opt"]["train_file"].remove(".csv").split("/")
+    print(config["train_opts"]["train_file"])
+    print(config["train_opts"]["train_file"].split(".")[-2].split("/"))
+    data, nimf, cell = config["train_opts"]["train_file"].split(".")[-2].split("/")[-3:]
     # BENGI or TargetFinder ??
     if data == "BENGI":
         model_name += "BG_"
@@ -375,31 +387,37 @@ if __name__ == "__main__":
 
     os.makedirs(outdir, exist_ok=True)
 
-    hold_out(
-            model_class=model_class, 
-            model_params=config["model_opts"],
-            optimizer_class=torch.optim.Adam, 
-            optimizer_params=optimizer_params,
-            dataset=all_train_data,
-            groups=all_train_data.metainfo["chrom"],
-            num_epoch=config["train_opts"]["num_epoch"], 
-            patience=config["train_opts"]["patience"], 
-            batch_size=config["train_opts"]["batch_size"], 
-            num_workers=config["train_opts"]["num_workers"],
-            outdir=outdir,
-            model_name=model_name,
-            checkpoint_prefix="checkpoint",
-            device=device,
-            train_chroms=config["train_opt"]["train_chroms"],
-            valid_chroms=config["train_opt"]["valid_chroms"],
-            use_scheduler=config["train_opts"]["use_scheduler"],
+
+    train_mode = True
+    train_mode = False
+
+    # __train__
+    if train_mode == True:
+        hold_out(
+                model_class=model_class, 
+                model_params=config["model_opts"],
+                optimizer_class=torch.optim.Adam, 
+                optimizer_params=optimizer_params,
+                dataset=all_train_data,
+                groups=all_train_data.metainfo["chrom"],
+                num_epoch=config["train_opts"]["num_epoch"], 
+                patience=config["train_opts"]["patience"], 
+                batch_size=config["train_opts"]["batch_size"], 
+                num_workers=config["train_opts"]["num_workers"],
+                outdir=outdir,
+                model_name=model_name,
+                checkpoint_prefix="checkpoint",
+                device=device,
+                train_chroms=config["train_opts"]["train_chroms"],
+                valid_chroms=config["train_opts"]["valid_chroms"],
+                use_scheduler=config["train_opts"]["use_scheduler"],
         )
 
 
 
 
     # ___test___
-    test_file = config["train_opt"]["test_file"]
+    test_file = config["train_opts"]["test_file"]
     all_test_data = epi_dataset.EPIDataset(
         datasets=test_file,
         feats_config=config["feats_config"],
@@ -423,7 +441,7 @@ if __name__ == "__main__":
     else:
         pred_name += "no_masked_"
 
-    data, nimf, cell = config["train_opt"]["test_file"].remove(".csv").split("/")
+    data, nimf, cell = config["train_opts"]["test_file"].split(".")[-2].split("/")[-3:]
     # BENGI or TargetFinder ??
     if data == "BENGI":
         pred_name += "BG_"
@@ -437,8 +455,10 @@ if __name__ == "__main__":
         pred_name += "org_"
     elif nimf == "NIMF_9999999999":
         pred_name += "INF_"
-    else:
+    elif "NIMF" in nimf:
         pred_name += str(nimf.split("_")[-1]) + "_"
+    elif "cmn" in nimf:
+        pred_name += "cmn_"
 
     # which cell ??
     pred_name += cell
@@ -460,9 +480,9 @@ if __name__ == "__main__":
         optimizer_params=optimizer_params,
         dataset=all_test_data,
         groups=all_test_data.metainfo["chrom"],
-        test_chroms=config["train_opt"]["test_chroms"],
+        test_chroms=config["train_opts"]["test_chroms"],
         batch_size=config["train_opts"]["batch_size"], 
         num_workers=config["train_opts"]["num_workers"],
-        outpath=os.path.join(os.path.dirname(__file__), outdir, "model", model_name, ""),
+        outpath=pred_path,
         model_path=os.path.join(os.path.dirname(__file__), outdir, "model", model_name, f"best_epoch.pt")
     )
