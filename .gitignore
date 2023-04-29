@@ -34,3 +34,5 @@ ep2vec_result
 *.DS_Store
 *.xlsx
 *.tsv
+!TransEPI/data/annotation/*
+!TransEPI/data/genomic_data/*
