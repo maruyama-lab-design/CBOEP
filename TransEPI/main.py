@@ -288,6 +288,8 @@ def get_args():
     p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     p.add_argument('--gpu', default=1, type=int, help="GPU ID, (-1 for CPU)")
     p.add_argument('--seed', type=int, default=2020, help="Random seed")
+    p.add_argument('--train_cell', type=str, default="GM12878", help="cell line on train")
+    p.add_argument('--test_cell', type=str, default="GM12878", help="cell line on test")
     p.add_argument('--config', type=str, default="main_opt.json", help="config filename")
 
     # 以下追加
@@ -311,7 +313,8 @@ if __name__ == "__main__":
 
 
     # args.test_on_another_data = True
-    train_file = config["train_opts"]["train_file"]
+    train_dir = config["train_opts"]["train_dir"]
+    train_file = os.path.join(train_dir, f"{args.train_cell}.csv")
     outdir = config["outdir"]
 
 
@@ -362,9 +365,9 @@ if __name__ == "__main__":
     else:
         model_name += "no_masked_"
 
-    print(config["train_opts"]["train_file"])
-    print(config["train_opts"]["train_file"].split(".")[-2].split("/"))
-    data, nimf, cell = config["train_opts"]["train_file"].split(".")[-2].split("/")[-3:]
+    print(config["train_opts"]["train_dir"])
+    print(config["train_opts"]["train_dir"].split(".")[-1].split("/"))
+    data, nimf = config["train_opts"]["train_dir"].split(".")[-1].split("/")[-2:]
     # BENGI or TargetFinder ??
     if data == "BENGI":
         model_name += "BG_"
@@ -382,14 +385,17 @@ if __name__ == "__main__":
         model_name += str(nimf.split("_")[-1]) + "_"
 
     # which cell ??
-    model_name += cell
+    model_name += args.train_cell
     # ___
 
     os.makedirs(outdir, exist_ok=True)
 
-
-    train_mode = True
-    train_mode = False
+    # !!!
+    if os.path.exists(os.path.join(os.path.dirname(__file__), outdir, "model", model_name, f"best_epoch.pt")):
+        train_mode = False
+        print(f"skip train phase")
+    else:
+        train_mode = True
 
     # __train__
     if train_mode == True:
@@ -417,7 +423,8 @@ if __name__ == "__main__":
 
 
     # ___test___
-    test_file = config["train_opts"]["test_file"]
+    test_dir = config["train_opts"]["test_dir"]
+    test_file = os.path.join(test_dir, f"{args.test_cell}.csv")
     all_test_data = epi_dataset.EPIDataset(
         datasets=test_file,
         feats_config=config["feats_config"],
@@ -441,7 +448,7 @@ if __name__ == "__main__":
     else:
         pred_name += "no_masked_"
 
-    data, nimf, cell = config["train_opts"]["test_file"].split(".")[-2].split("/")[-3:]
+    data, nimf= config["train_opts"]["test_dir"].split(".")[-1].split("/")[-2:]
     # BENGI or TargetFinder ??
     if data == "BENGI":
         pred_name += "BG_"
@@ -461,7 +468,7 @@ if __name__ == "__main__":
         pred_name += "cmn_"
 
     # which cell ??
-    pred_name += cell
+    pred_name += args.test_cell
 
     pred_name += ".txt"
     # ___
