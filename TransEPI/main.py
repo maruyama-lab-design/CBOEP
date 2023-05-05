@@ -179,8 +179,8 @@ def hold_out(
         valid_pred, valid_true, valid_pred_dist, valid_true_dist = predict(model, valid_loader)
         val_AUC, val_AUPR, val_F1, val_pre, val_rec, val_MCC = misc_utils.evaluator(valid_true, valid_pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
 
-        train_loss = metrics.log_loss(train_true, train_pred)
-        valid_loss = metrics.log_loss(valid_true, valid_pred)
+        train_loss = metrics.log_loss(train_true, train_pred.astype(np.float64))
+        valid_loss = metrics.log_loss(valid_true, valid_pred.astype(np.float64))
 
         log_tra_text = f"  - train...\nloss={train_loss:.4f}\tAUC={tra_AUC:.4f}\tAUPR={tra_AUPR:.4f}\tF1={tra_F1:.4f}\tpre={tra_pre:.4f}\trec={tra_rec:.4f}\tMCC={tra_MCC:.4f}\t"
         log_val_text = f"  - valid...\nloss={valid_loss:.4f}\tAUC={val_AUC:.4f}\tAUPR={val_AUPR:.4f}\tF1={val_F1:.4f}\tpre={val_pre:.4f}\trec={val_rec:.4f}\tMCC={val_MCC:.4f}\t"
