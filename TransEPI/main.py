@@ -123,7 +123,7 @@ def hold_out(
         if epoch_idx == 0:
             model = model_class(**model_params).to(device)
             optimizer = optimizer_class(model.parameters(), **optimizer_params)
-            scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=5, T_mult=2) # TODO 改善の余地あり
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=5, T_mult=2)
             if os.path.exists(checkpoint):
                 os.remove(checkpoint)
         else:
@@ -225,17 +225,6 @@ def hold_out(
     print(f"best epoch is {best_epoch}")
     best_model_path = os.path.join(modeldir, f"epoch{best_epoch}.pt")
     shutil.copyfile(best_model_path, os.path.join(modeldir, f"best_epoch.pt"))
-
-    # print(f"loaded epoch{best_epoch}.pt")
-    # model = model_class(**model_params).to(device)
-    # optimizer = optimizer_class(model.parameters(), **optimizer_params)
-    # state_dict = torch.load(best_model_path)
-    # model.load_state_dict(state_dict["model_state_dict"])
-    # optimizer.load_state_dict(state_dict["optimizer_state_dict"])
-    # scheduler.load_state_dict(state_dict["scheduler_state_dict"])
-
-    # return model
-
 
 
 
@@ -396,6 +385,8 @@ if __name__ == "__main__":
         print(f"skip train phase")
     else:
         train_mode = True
+
+    train_mode = True
 
     # __train__
     if train_mode == True:
