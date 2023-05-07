@@ -5,7 +5,7 @@ import os
 
 
 # BENGI と NIMF の負例での学習の質を比較するために共通にテストに用いる負例データを作成する
-csv_columns = ["label", "distance", "enhancer_chrom", "enhancer_start", "enhancer_end", "enhancer_name", "promoter_chrom", "promoter_start", "promoter_end", "promoter_name"]
+csv_columns = ["label", "enhancer_distance_to_promoter", "enhancer_chrom", "enhancer_start", "enhancer_end", "enhancer_name", "promoter_chrom", "promoter_start", "promoter_end", "promoter_name"]
 test_chroms = ["chr19", "chr20", "chr21", "chr22", "chrX"]
 
 
@@ -23,6 +23,8 @@ def break_region_name(dataname, enhancer_name, promoter_name):
 
 
 def make_all_pair(dataname, cell_type):
+    if os.path.exists(os.path.join(os.path.dirname(__file__), dataname, "original", f"{cell_type}.csv")) == False:
+        return
     org_df = pd.read_csv(os.path.join(os.path.dirname(__file__), dataname, "original", f"{cell_type}.csv"))
 
 
@@ -31,8 +33,8 @@ def make_all_pair(dataname, cell_type):
 
     for enhancer_chrom, subdf in org_df.groupby("enhancer_chrom"):
 
-        if enhancer_chrom not in ["chr19", "chr20", "chr21", "chr22", "chrX"]:
-            continue
+        # if enhancer_chrom not in ["chr19", "chr20", "chr21", "chr22", "chrX"]:
+        #     continue
         if enhancer_chrom not in all_pair_dict.keys():
             all_pair_dict[enhancer_chrom] = []
 
@@ -48,7 +50,10 @@ def make_all_pair(dataname, cell_type):
 
 
     data_list = []
-    for chr in ["chr19", "chr20", "chr21", "chr22", "chrX"]: # 本当は全部でもよい
+    all_chr_list = [f"chr{i}" for i in list(range(1, 23)) + ["X"]]
+    for chr in all_chr_list: # 本当は全部でもよい
+        if chr not in all_pair_dict.keys():
+            continue
         all_pairs = all_pair_dict[chr]
 
         for pair in all_pairs:
@@ -76,6 +81,6 @@ def make_all_pair(dataname, cell_type):
 
 
 
-for cell_type in ["GM12878", "HeLa-S3", "IMR90", "K562", "NHEK"]:
+for cell_type in ["GM12878", "HeLa-S3", "HMEC", "IMR90", "K562", "NHEK"]:
     for dataname in ["BENGI", "TargetFinder"]:
         make_all_pair(dataname, cell_type)

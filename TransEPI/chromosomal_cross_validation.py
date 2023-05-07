@@ -72,7 +72,7 @@ def predict(model: nn.Module, data_loader: DataLoader, device=torch.device('cuda
 	return (result.squeeze(), true_label.squeeze(), result_dist.squeeze(), true_dist.squeeze())
 
 
-def hold_out(
+def train(
 		model_class, model_params, 
 		optimizer_class, optimizer_params, 
 		dataset, groups,
@@ -108,7 +108,7 @@ def hold_out(
 
 		print("\nCV epoch: {}/{}\t({})".format(epoch_idx, num_epoch, time.asctime()))
 		
-		# ___holdout___
+
 		modeldir = os.path.join(os.path.dirname(__file__), outdir, "model", model_name)
 		os.makedirs(modeldir, exist_ok = True)
 		
@@ -179,8 +179,8 @@ def hold_out(
 		valid_pred, valid_true, valid_pred_dist, valid_true_dist = predict(model, valid_loader)
 		val_AUC, val_AUPR, val_F1, val_pre, val_rec, val_MCC = misc_utils.evaluator(valid_true, valid_pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
 
-		train_loss = metrics.log_loss(train_true, train_pred)
-		valid_loss = metrics.log_loss(valid_true, valid_pred)
+		train_loss = metrics.log_loss(train_true, train_pred.astype(np.float64))
+		valid_loss = metrics.log_loss(valid_true, valid_pred.astype(np.float64))
 
 		log_tra_text = f"  - train...\nloss={train_loss:.4f}\tAUC={tra_AUC:.4f}\tAUPR={tra_AUPR:.4f}\tF1={tra_F1:.4f}\tpre={tra_pre:.4f}\trec={tra_rec:.4f}\tMCC={tra_MCC:.4f}\t"
 		log_val_text = f"  - valid...\nloss={valid_loss:.4f}\tAUC={val_AUC:.4f}\tAUPR={val_AUPR:.4f}\tF1={val_F1:.4f}\tpre={val_pre:.4f}\trec={val_rec:.4f}\tMCC={val_MCC:.4f}\t"
@@ -279,7 +279,7 @@ def get_args():
 	p.add_argument('--seed', type=int, default=2020, help="Random seed")
 	p.add_argument('--train_cell', type=str, default="GM12878", help="cell line on train")
 	p.add_argument('--test_cell', type=str, default="GM12878", help="cell line on test")
-	p.add_argument('--config', type=str, default="main_opt.json", help="config filename")
+	p.add_argument('--config', type=str, default="chromosomal_cross_validation.json", help="config filename")
 
 	# 以下追加
 	p.add_argument('--use_mse', action="store_true")
@@ -351,7 +351,7 @@ if __name__ == "__main__":
 	chrom_split = json.load(open(os.path.join(os.path.dirname(__file__), "chromosome_split_opt.json")))
 	# k-fold chromosomal cross-validation
 	for k in range(10):
-		outdir = config["outdir"] + f"fold{k}"
+		outdir = config["outdir"] + f"/fold{k}"
 
 		# ___make model_name___
 		model_name = ""
@@ -459,8 +459,7 @@ if __name__ == "__main__":
 
 
 		pred_path = os.path.join(
-			os.path.dirname(__file__), outdir, "model", model_name,
-			"prediction", pred_name
+			os.path.dirname(__file__), outdir, "prediction", model_name, pred_name
 		)
 		os.makedirs(os.path.dirname(pred_path), exist_ok=True)
 
