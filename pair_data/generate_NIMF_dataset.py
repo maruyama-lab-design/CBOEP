@@ -207,7 +207,7 @@ def concat_NIMFnegative_and_positive(args):
 	else:
 		negative_df["promoter_start"] = negative_df["promoter_name"].map(get_range_from_name).map(lambda x: x[0])
 		negative_df["promoter_end"] = negative_df["promoter_name"].map(get_range_from_name).map(lambda x: x[1])
-	negative_df["distance"] = abs(((negative_df["enhancer_start"] + negative_df["enhancer_end"]) / 2) - 
+	negative_df["enhancer_distance_to_promoter"] = abs(((negative_df["enhancer_start"] + negative_df["enhancer_end"]) / 2) - 
 	((negative_df["promoter_start"] + negative_df["promoter_end"]) / 2))
 
 	# concat positive and negative
@@ -248,11 +248,19 @@ if __name__ == "__main__":
 	args.NIMF_max_d = config["NIMF_max_d"]
 	assert args.NIMF_max_d > 0
 	args.cell_type = config["cell_type"]
-	print(f"data {args.data}")
-	print(f"max_d {args.NIMF_max_d}")
-	print(f"cell {args.cell_type}")
-	args.outdir = os.path.join(os.path.dirname(__file__), args.data, f"NIMF_{args.NIMF_max_d}")
-	os.makedirs(args.outdir, exist_ok=True)
-	make_new_dataset(args)
+
+	for data in ["BENGI", "TargetFinder"]:
+		for d in [2500000, 5000000, 10000000, 9999999999]:
+			for cell in ["GM12878", "HeLa-S3", "HMEC", "IMR90", "K562", "NHEK"]:
+				if data == "TargetFinder" and cell == "HMEC":
+					continue
+					
+					args.data, args.NIMF_max_d, args.cell_type = data, d, cell
+					print(f"data {args.data}")
+					print(f"max_d {args.NIMF_max_d}")
+					print(f"cell {args.cell_type}")
+					args.outdir = os.path.join(os.path.dirname(__file__), args.data, f"NIMF_{args.NIMF_max_d}")
+					os.makedirs(args.outdir, exist_ok=True)
+					make_new_dataset(args)
 
 
