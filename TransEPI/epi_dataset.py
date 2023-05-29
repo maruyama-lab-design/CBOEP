@@ -40,8 +40,9 @@ class EPIDataset(Dataset):
             seq_len: int=2500000, 
             bin_size: int=500, 
             use_mark: bool=False,
-            mask_neighbor=False,
-            mask_window=False,
+            use_mask: bool=False,
+            # mask_neighbor=False,
+            # mask_window=False,
             sin_encoding=False,
             rand_shift=False,
             
@@ -53,10 +54,11 @@ class EPIDataset(Dataset):
         else:
             self.datasets = datasets
 
-        self.seq_len = int(seq_len)
         self.bin_size = int(bin_size)
-        assert self.seq_len % self.bin_size == 0, "{} / {}".format(self.seq_len, self.bin_size)
-        self.num_bins = seq_len // bin_size
+        if use_mask == False:
+            self.seq_len = int(seq_len)
+            assert self.seq_len % self.bin_size == 0, "{} / {}".format(self.seq_len, self.bin_size)
+            self.num_bins = seq_len // bin_size
 
         self.feats_order = list(feats_order)
         self.num_feats = len(feats_order)
@@ -92,8 +94,10 @@ class EPIDataset(Dataset):
 
         self.sin_encoding = sin_encoding
         self.use_mark = use_mark
-        self.mask_window = mask_window
-        self.mask_neighbor = mask_neighbor
+        # self.mask_window = mask_window
+        # self.mask_neighbor = mask_neighbor
+        self.mask_window = use_mask
+        self.mask_neighbor = use_mask
         self.rand_shift = rand_shift
 
         self.load_datasets()
@@ -107,7 +111,7 @@ class EPIDataset(Dataset):
         for fn in self.datasets:
             with custom_open(fn) as infile:
                 for l in infile:
-                    fields = l.strip().split(',')
+                    fields = l.strip().split(',')[:10]
                     label, dist, chrom, enh_start, enh_end, enh_name, \
                             _, prom_start, prom_end, prom_name = fields[0:10]
                     if label == "label": # skip header
@@ -131,31 +135,24 @@ class EPIDataset(Dataset):
                     p_start, p_end = prom_name.split('|')[1].split(':')[-1].split('-')
                     tss_coord = (int(p_start) + int(p_end)) // 2
 
-                    seq_begin = (enh_coord + tss_coord) // 2 - self.seq_len // 2
-                    seq_end = (enh_coord + tss_coord) // 2 + self.seq_len // 2
-
-                    assert seq_begin <= enh_coord and seq_begin <= tss_coord, f"seq_begin:{seq_begin}, enh_coord:{enh_coord}, tss_coord:{tss_coord}"
-                    assert enh_coord < seq_end and tss_coord < seq_end, f"seq_end:{seq_end}, enh_coord:{enh_coord}, tss_coord:{tss_coord}"
-                    
-                    # enh_bin = (enh_coord - seq_begin) // self.bin_size
                     enh_bin = enh_coord // self.bin_size
-                    # prom_bin = (tss_coord - seq_begin) // self.bin_size
                     prom_bin = tss_coord // self.bin_size
-                    start_bin, stop_bin = seq_begin // self.bin_size, seq_end // self.bin_size
 
-                    #  ___以下追加___
-                    # if enh_bin - prom_bin >= self.num_bins:
-                    #     enh_bin -= 1
-                    #     print(f"enh_bin:{enh_bin}, prom_bin:{prom_bin}")
-                    # if prom_bin - enh_bin >= self.num_bins:
-                    #     prom_bin -= 1
-                    #     print(f"enh_bin:{enh_bin}, prom_bin:{prom_bin}")
-                    # if stop_bin - start_bin >= self.num_bins:
-                    #     stop_bin -= 1
-                    #     print(f"stop_bin:{stop_bin}, start_bin:{start_bin}")
-                    # _______
+                    if self.mask_window and self.mask_neighbor:
+                        seq_begin, seq_end, start_bin, stop_bin = -1, -1, -1, -1
+                    else:
+                        seq_begin = (enh_coord + tss_coord) // 2 - self.seq_len // 2
+                        seq_end = (enh_coord + tss_coord) // 2 + self.seq_len // 2
 
-                    # assert abs(start_bin - stop_bin) < 5000, f"start_bin:{enh_bin}, stop_bin:{prom_bin}"
+                        assert seq_begin <= enh_coord and seq_begin <= tss_coord, f"seq_begin:{seq_begin}, enh_coord:{enh_coord}, tss_coord:{tss_coord}"
+                        assert enh_coord < seq_end and tss_coord < seq_end, f"seq_end:{seq_end}, enh_coord:{enh_coord}, tss_coord:{tss_coord}"
+                        
+                        # enh_bin = (enh_coord - seq_begin) // self.bin_size
+                        # # enh_bin = enh_coord // self.bin_size
+                        # prom_bin = (tss_coord - seq_begin) // self.bin_size
+                        # # prom_bin = tss_coord // self.bin_size
+                        start_bin, stop_bin = seq_begin // self.bin_size, seq_end // self.bin_size
+
 
                     left_pad_bin, right_pad_bin = 0, 0
                     if start_bin < 0:
@@ -186,7 +183,7 @@ class EPIDataset(Dataset):
                         start_bin + shift, stop_bin + shift, 
                         left_pad_bin, right_pad_bin, 
                         enh_bin, prom_bin, 
-                        cell, chrom, np.log2(1 + 500000 / float(dist)),
+                        cell, chrom, # np.log2(1 + 500000 / float(dist)),
                         int(label), knock_range
                     ))
                     # print(l.strip())
@@ -212,48 +209,51 @@ class EPIDataset(Dataset):
         return len(self.samples)
     
     def __getitem__(self, idx):
-        start_bin, stop_bin, left_pad, right_pad, enh_bin, prom_bin, cell, chrom, dist, label, knock_range = self.samples[idx]
+        start_bin, stop_bin, left_pad, right_pad, enh_bin, prom_bin, cell, chrom, label, knock_range = self.samples[idx]
         enh_idx = enh_bin - start_bin + left_pad
         prom_idx = prom_bin - start_bin + left_pad
-
-        # 以下を追加 (何故かenh_idxとprom_idxがfeatsからはみ出すことがあるので、修正する)
-        if enh_idx == self.seq_len // self.bin_size:
-            print(f"enh idx: {enh_idx}, prom idx: {prom_idx}")
-            enh_idx -= 1
-        if prom_idx == self.seq_len // self.bin_size:
-            print(f"enh idx: {enh_idx}, prom idx: {prom_idx}")
-            prom_idx -= 1
-        # _____
 
         # mask用に修正
         if self.mask_neighbor and self.mask_window:
             if prom_idx > enh_idx:
-                enh_idx, prom_idx = 10, 31
+                enh_idx, prom_idx = 12, 37
             elif prom_idx < enh_idx:
-                enh_idx, prom_idx = 31, 10
+                enh_idx, prom_idx = 37, 12
             else:
-                enh_idx, prom_idx = 10, 31
+                enh_idx, prom_idx = 12, 37
+        else:
+            # 以下を追加 (何故かenh_idxとprom_idxがfeatsからはみ出すことがあるので、修正する)
+            if enh_idx == self.seq_len // self.bin_size:
+                print(f"enh idx: {enh_idx}, prom idx: {prom_idx}")
+                enh_idx -= 1
+            if prom_idx == self.seq_len // self.bin_size:
+                print(f"enh idx: {enh_idx}, prom idx: {prom_idx}")
+                prom_idx -= 1
+            # _____
+
 
         # print(self.samples[idx], self.metainfo["shift"][idx])
         if self.mask_neighbor and self.mask_window:
-            ar = torch.zeros((0, 42)) # enh+-10, prm +-10
+            ar = torch.zeros((0, 50)) # enh+-10, prm +-10
         else:
             ar = torch.zeros((0, stop_bin - start_bin))
         # print(start_bin - left_pad, stop_bin + right_pad, enh_bin, prom_bin, enh_idx, prom_idx)
         for feat in self.feats_order:
             if self.mask_neighbor and self.mask_window:
                 # enh_feats = self.feats[cell][feat][chrom][enh_bin-10:enh_bin+11].view(1, -1)
-                enh_feats = self.feats[cell][feat][chrom][enh_bin-1:enh_bin+2].view(1, -1)
-                enh_feats = torch.cat((torch.zeros(1, 9), enh_feats), dim=1)
-                enh_feats = torch.cat((enh_feats, torch.zeros(1, 9)), dim=1)
+                enh_feats = self.feats[cell][feat][chrom][enh_bin-2:enh_bin+3].view(1, -1)
+                # print(enh_feats.size())
+                enh_feats = torch.cat((torch.zeros(1, 10), enh_feats), dim=1)
+                enh_feats = torch.cat((enh_feats, torch.zeros(1, 10)), dim=1)
                 # prom_feats = self.feats[cell][feat][chrom][prom_bin-10:prom_bin+11].view(1, -1)
-                prom_feats = self.feats[cell][feat][chrom][prom_bin-1:prom_bin+2].view(1, -1)
-                prom_feats = torch.cat((torch.zeros(1, 9), prom_feats), dim=1)
-                prom_feats = torch.cat((prom_feats, torch.zeros(1, 9)), dim=1)
-                if enh_feats.size() != prom_feats.size():
-                    print(enh_feats.size(), prom_feats.size(), start_bin, stop_bin, enh_bin, prom_bin)
+                prom_feats = self.feats[cell][feat][chrom][prom_bin-2:prom_bin+3].view(1, -1)
+                prom_feats = torch.cat((torch.zeros(1, 10), prom_feats), dim=1)
+                prom_feats = torch.cat((prom_feats, torch.zeros(1, 10)), dim=1)
+                assert enh_feats.size() == prom_feats.size()
                 # print(enh_feats.size())
                 # print(prom_feats.size())
+                # print(enh_feats.size(), prom_feats.size())
+                # exit()
                 cat_feats = torch.cat((enh_feats, prom_feats), dim=1)
                 ar = torch.cat((ar, cat_feats), dim=0)
             else:
@@ -281,40 +281,21 @@ class EPIDataset(Dataset):
             mask = torch.FloatTensor(mask)
             ar = ar * mask
 
-        # mask実験は書き換える
-        # if self.mask_window:
-        #     shift = min(abs(enh_bin - prom_bin) - 5, 0)
-        #     mask = torch.cat((
-        #         torch.ones(ar.size(0), min(enh_bin, prom_bin) - start_bin + left_pad + 3 + shift),
-        #         torch.zeros(ar.size(0), max(abs(enh_idx - prom_idx) - 5, 0)),
-        #         torch.ones(ar.size(0), stop_bin + right_pad - max(enh_bin, prom_bin) + 2)
-        #     ), dim=1)
-        #     assert mask.size() == ar.size(), "{}".format(mask.size())
-        #     ar = ar * mask
-        # if self.mask_neighbor:
-        #     mask = torch.cat((
-        #         torch.zeros(ar.size(0), min(enh_bin, prom_bin) - start_bin + left_pad - 2),
-        #         torch.ones(ar.size(0), abs(enh_bin - prom_bin) + 5),
-        #         torch.zeros(ar.size(0), stop_bin + right_pad - max(enh_bin, prom_bin) - 3)
-        #     ), dim=1)
-        #     assert mask.size() == ar.size(), "{}".format(mask.size())
-        #     ar = ar * mask
-
         if self.mask_neighbor and self.mask_window:
             if prom_bin > enh_bin:
-                enh_pos_enc = torch.arange(-10, 11, 1).view(1, -1)
-                enh_pos_enc = torch.cat((enh_pos_enc, torch.arange(prom_bin-enh_bin-10, prom_bin-enh_bin+11, 1).view(1, -1)), dim=1)
+                enh_pos_enc = torch.arange(-12, 13, 1).view(1, -1)
+                enh_pos_enc = torch.cat((enh_pos_enc, torch.arange(prom_bin-enh_bin-12, prom_bin-enh_bin+13, 1).view(1, -1)), dim=1)
 
-                prom_pos_enc = torch.arange(enh_bin-prom_bin-10, enh_bin-prom_bin+11, 1).view(1, -1)
-                prom_pos_enc = torch.cat((prom_pos_enc, torch.arange(-10, 11, 1).view(1, -1)), dim=1)
+                prom_pos_enc = torch.arange(enh_bin-prom_bin-12, enh_bin-prom_bin+13, 1).view(1, -1)
+                prom_pos_enc = torch.cat((prom_pos_enc, torch.arange(-12, 13, 1).view(1, -1)), dim=1)
 
                 pos_enc = torch.cat((enh_pos_enc, prom_pos_enc), dim=0)
             else:
-                prom_pos_enc = torch.arange(-10, 11, 1).view(1, -1)
-                prom_pos_enc = torch.cat((prom_pos_enc, torch.arange(enh_bin-prom_bin-10, enh_bin-prom_bin+11, 1).view(1, -1)), dim=1)
+                prom_pos_enc = torch.arange(-12, 13, 1).view(1, -1)
+                prom_pos_enc = torch.cat((prom_pos_enc, torch.arange(enh_bin-prom_bin-12, enh_bin-prom_bin+13, 1).view(1, -1)), dim=1)
 
-                enh_pos_enc = torch.arange(prom_bin-enh_bin-10, prom_bin-enh_bin+11, 1).view(1, -1)
-                enh_pos_enc = torch.cat((enh_pos_enc, torch.arange(-10, 11, 1).view(1, -1)), dim=1)
+                enh_pos_enc = torch.arange(prom_bin-enh_bin-12, prom_bin-enh_bin+13, 1).view(1, -1)
+                enh_pos_enc = torch.cat((enh_pos_enc, torch.arange(-12, 13, 1).view(1, -1)), dim=1)
 
                 pos_enc = torch.cat((prom_pos_enc, enh_pos_enc), dim=0)
         else:
@@ -344,7 +325,7 @@ class EPIDataset(Dataset):
 
 
 
-        return ar, torch.as_tensor([dist], dtype=torch.float), torch.as_tensor([enh_idx], dtype=torch.float), torch.as_tensor([prom_idx], dtype=torch.float), torch.as_tensor([label], dtype=torch.float)
+        return ar, torch.as_tensor([enh_idx], dtype=torch.float), torch.as_tensor([prom_idx], dtype=torch.float), torch.as_tensor([label], dtype=torch.float)
 
     def sym_log(self, ar):
         sign = torch.sign(ar)

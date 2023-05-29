@@ -49,27 +49,23 @@ def model_summary(model):
 
 def predict(model: nn.Module, data_loader: DataLoader, device=torch.device('cuda'), save_final_feat=False, research_name=None):
     model.eval()
-    result, true_label, result_dist, true_dist = list(), list(), list(), list()
-    for batch_idx, (feats, dists, enh_idxs, prom_idxs, labels) in enumerate(data_loader):
+    result, true_label = list(), list()
+    for batch_idx, (feats, enh_idxs, prom_idxs, labels) in enumerate(data_loader):
 
-        feats, dists, labels = feats.to(device), dists.to(device), labels.to(device)
+        feats, labels = feats.to(device), labels.to(device)
         # enh_idxs, prom_idxs = enh_idxs.to(device), prom_idxs.to(device)
-        pred, pred_dist, att = model(feats, return_att=True, enh_idx=enh_idxs, prom_idx=prom_idxs, batch_idx=batch_idx,
+        pred, att = model(feats, return_att=True, enh_idx=enh_idxs, prom_idx=prom_idxs, batch_idx=batch_idx,
                                      save_final_feat=save_final_feat, research_name=research_name)
         del att
         pred = pred.detach().cpu().numpy()
         labels = labels.detach().cpu().numpy()
-        pred_dist = pred_dist.detach().cpu().numpy()
-        dists = dists.detach().cpu().numpy()
         result.append(pred)
         true_label.append(labels)
-        result_dist.append(pred_dist)
-        true_dist.append(dists)
+
     result = np.concatenate(result, axis=0)
     true_label = np.concatenate(true_label, axis=0)
-    result_dist = np.concatenate(result_dist, axis=0)
-    true_dist = np.concatenate(true_dist, axis=0)
-    return (result.squeeze(), true_label.squeeze(), result_dist.squeeze(), true_dist.squeeze())
+
+    return (result.squeeze(), true_label.squeeze())
 
 
 def hold_out(
@@ -91,6 +87,7 @@ def hold_out(
     loss_dict = {"epochs": [], "train_loss": [], "valid_loss": []}
     train_idx, valid_idx = [], []
 
+    log_list = []
     for epoch_idx in range(num_epoch):
 
         epoch_results["AUC"] = 0
@@ -133,11 +130,12 @@ def hold_out(
             scheduler.load_state_dict(state_dict["scheduler_state_dict"])
 
         model.train()
-        for feats, dists, enh_idxs, prom_idxs, labels in tqdm.tqdm(train_loader): # train by batch
-
-            feats, dists, labels = feats.to(device), dists.to(device), labels.to(device)
+        # print("aiueo1")
+        for feats, enh_idxs, prom_idxs, labels in tqdm.tqdm(train_loader): # train by batch
+            # print("aiueo2")
+            feats, labels = feats.to(device), labels.to(device)
             if hasattr(model, "att_C"): # TODO
-                pred, pred_dists, att = model(feats, return_att=True, enh_idx=enh_idxs, prom_idx=prom_idxs)
+                pred, att = model(feats, return_att=True, enh_idx=enh_idxs, prom_idx=prom_idxs)
                 attT = att.transpose(1, 2)
                 identity = torch.eye(att.size(1)).to(device)
                 identity = Variable(identity.unsqueeze(0).expand(labels.size(0), att.size(1), att.size(1)))
@@ -156,10 +154,6 @@ def hold_out(
 
 
 
-        # prepare for next epoch
-        if use_scheduler:
-            scheduler.step()
-
         torch.save({
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
@@ -174,9 +168,9 @@ def hold_out(
 
         model.eval()
         train_loss, valid_loss = None, None
-        train_pred, train_true, train_pred_dist, train_true_dist = predict(model, sample_loader)
+        train_pred, train_true = predict(model, sample_loader)
         tra_AUC, tra_AUPR, tra_F1, tra_pre, tra_rec, tra_MCC = misc_utils.evaluator(train_true, train_pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
-        valid_pred, valid_true, valid_pred_dist, valid_true_dist = predict(model, valid_loader)
+        valid_pred, valid_true = predict(model, valid_loader)
         val_AUC, val_AUPR, val_F1, val_pre, val_rec, val_MCC = misc_utils.evaluator(valid_true, valid_pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
 
         train_loss = metrics.log_loss(train_true, train_pred.astype(np.float64))
@@ -187,11 +181,12 @@ def hold_out(
         print(log_tra_text)
         print(log_val_text)
 
+        log_list.append([train_loss, valid_loss, tra_AUC, val_AUC, tra_AUPR, val_AUPR, tra_F1, val_F1, tra_pre, val_pre, tra_rec, val_rec, tra_MCC, val_MCC])
+
         with open(os.path.join(modeldir, "log.txt"), "a") as f:
             print(f"___epochs{epoch_idx}___", file=f)
             print(log_tra_text, file=f)
             print(log_val_text, file=f)
-
 
         epoch_results["AUC"] = val_AUC
         epoch_results["AUPR"] = val_AUPR
@@ -219,6 +214,31 @@ def hold_out(
                 break
             else:
                 print("Wait{} ({})".format(wait, time.asctime()))
+
+
+
+
+    # save train and valid prediction result
+    df = pd.DataFrame(
+        data=log_list,
+        columns=[
+            "train_loss",
+            "valid_loss",
+            "train_AUC",
+            "valid_AUC",
+            "train_AUPR",
+            "valid_AUPR", 
+            "train_F1", 
+            "valid_F1", 
+            "train_precision", 
+            "valid_precision", 
+            "train_recall",
+            "valid_recall", 
+            "train_MCC", 
+            "valid_MCC"
+            ],
+    )
+    df.to_csv(os.path.join(modeldir, "log.csv"), index=None)
 
 
     # save best model
@@ -249,7 +269,7 @@ def test(model_class, model_params,
     prom_names = np.array(dataset.metainfo["prom_name"])[test_idx]
     test_loader = DataLoader(Subset(dataset, indices=test_idx), shuffle=False, batch_size=batch_size, num_workers=num_workers)
     model.eval()
-    test_pred, test_true, test_pred_dist, test_true_dist = predict(model, test_loader)
+    test_pred, test_true = predict(model, test_loader)
     # AUC, AUPR, F_in, pre, rec, MCC = misc_utils.evaluator(test_true, test_pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
 
     np.savetxt(
@@ -282,8 +302,8 @@ def get_args():
     p.add_argument('--config', type=str, default="main_opt.json", help="config filename")
 
     # 以下追加
-    p.add_argument('--use_mse', action="store_true")
-    p.add_argument('--test_on_another_data', action="store_true")
+    # p.add_argument('--use_mse', action="store_true")
+    # p.add_argument('--test_on_another_data', action="store_true")
     # ___
     return p
 
@@ -294,14 +314,8 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    # mse
-    args.use_mse = False
-    # ___
-
     config = json.load(open(os.path.join(os.path.dirname(__file__), args.config)))
 
-
-    # args.test_on_another_data = True
     train_dir = config["train_opts"]["train_dir"]
     train_file = os.path.join(train_dir, f"{args.train_cell}.csv")
     outdir = config["outdir"]
@@ -314,8 +328,9 @@ if __name__ == "__main__":
         seq_len=config["seq_len"], 
         bin_size=config["bin_size"], 
         use_mark=False,
-        mask_neighbor=True, # TODO
-        mask_window=True, # TODO
+        use_mask=config["use_mask"],
+        # mask_neighbor=True, # TODO
+        # mask_window=True, # TODO
         sin_encoding=False,
         rand_shift=False,
     )
@@ -327,11 +342,8 @@ if __name__ == "__main__":
     print("##command: {}".format(' '.join(sys.argv)))
     print("##config: {}".format(config))
     print("##sample size: {}".format(len(all_train_data)))
-    torch.save(all_train_data.__getitem__(0), "tmp.pt")
-
 
     chroms = all_train_data.metainfo["chrom"]
-
 
     if args.gpu >= 0:
         os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
@@ -386,8 +398,6 @@ if __name__ == "__main__":
     else:
         train_mode = True
 
-    train_mode = True
-
     # __train__
     if train_mode == True:
         hold_out(
@@ -423,8 +433,9 @@ if __name__ == "__main__":
         seq_len=config["seq_len"], 
         bin_size=config["bin_size"], 
         use_mark=False,
-        mask_neighbor=True, # TODO
-        mask_window=True, # TODO
+        use_mask=config["use_mask"],
+        # mask_neighbor=True, # TODO
+        # mask_window=True, # TODO
         sin_encoding=False,
         rand_shift=False,
     )
@@ -466,8 +477,7 @@ if __name__ == "__main__":
 
 
     pred_path = os.path.join(
-        os.path.dirname(__file__), outdir, "model", model_name,
-        "prediction", pred_name
+        os.path.dirname(__file__), outdir, "prediction", model_name, pred_name
     )
     os.makedirs(os.path.dirname(pred_path), exist_ok=True)
 

@@ -49,27 +49,21 @@ def model_summary(model):
 
 def predict(model: nn.Module, data_loader: DataLoader, device=torch.device('cuda'), save_final_feat=False, research_name=None):
 	model.eval()
-	result, true_label, result_dist, true_dist = list(), list(), list(), list()
-	for batch_idx, (feats, dists, enh_idxs, prom_idxs, labels) in enumerate(data_loader):
+	result, true_label = list(), list()
+	for batch_idx, (feats, enh_idxs, prom_idxs, labels) in enumerate(data_loader):
 
-		feats, dists, labels = feats.to(device), dists.to(device), labels.to(device)
+		feats, labels = feats.to(device), labels.to(device)
 		# enh_idxs, prom_idxs = enh_idxs.to(device), prom_idxs.to(device)
-		pred, pred_dist, att = model(feats, return_att=True, enh_idx=enh_idxs, prom_idx=prom_idxs, batch_idx=batch_idx,
+		pred, att = model(feats, return_att=True, enh_idx=enh_idxs, prom_idx=prom_idxs, batch_idx=batch_idx,
 									 save_final_feat=save_final_feat, research_name=research_name)
 		del att
 		pred = pred.detach().cpu().numpy()
 		labels = labels.detach().cpu().numpy()
-		pred_dist = pred_dist.detach().cpu().numpy()
-		dists = dists.detach().cpu().numpy()
 		result.append(pred)
 		true_label.append(labels)
-		result_dist.append(pred_dist)
-		true_dist.append(dists)
 	result = np.concatenate(result, axis=0)
 	true_label = np.concatenate(true_label, axis=0)
-	result_dist = np.concatenate(result_dist, axis=0)
-	true_dist = np.concatenate(true_dist, axis=0)
-	return (result.squeeze(), true_label.squeeze(), result_dist.squeeze(), true_dist.squeeze())
+	return (result.squeeze(), true_label.squeeze())
 
 
 def train(
@@ -133,11 +127,11 @@ def train(
 			scheduler.load_state_dict(state_dict["scheduler_state_dict"])
 
 		model.train()
-		for feats, dists, enh_idxs, prom_idxs, labels in tqdm.tqdm(train_loader): # train by batch
+		for feats, enh_idxs, prom_idxs, labels in tqdm.tqdm(train_loader): # train by batch
 
-			feats, dists, labels = feats.to(device), dists.to(device), labels.to(device)
+			feats, labels = feats.to(device), labels.to(device)
 			if hasattr(model, "att_C"): # TODO
-				pred, pred_dists, att = model(feats, return_att=True, enh_idx=enh_idxs, prom_idx=prom_idxs)
+				pred, att = model(feats, return_att=True, enh_idx=enh_idxs, prom_idx=prom_idxs)
 				attT = att.transpose(1, 2)
 				identity = torch.eye(att.size(1)).to(device)
 				identity = Variable(identity.unsqueeze(0).expand(labels.size(0), att.size(1), att.size(1)))
@@ -174,9 +168,9 @@ def train(
 
 		model.eval()
 		train_loss, valid_loss = None, None
-		train_pred, train_true, train_pred_dist, train_true_dist = predict(model, sample_loader)
+		train_pred, train_true = predict(model, sample_loader)
 		tra_AUC, tra_AUPR, tra_F1, tra_pre, tra_rec, tra_MCC = misc_utils.evaluator(train_true, train_pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
-		valid_pred, valid_true, valid_pred_dist, valid_true_dist = predict(model, valid_loader)
+		valid_pred, valid_true = predict(model, valid_loader)
 		val_AUC, val_AUPR, val_F1, val_pre, val_rec, val_MCC = misc_utils.evaluator(valid_true, valid_pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
 
 		train_loss = metrics.log_loss(train_true, train_pred.astype(np.float64))
@@ -249,7 +243,7 @@ def test(model_class, model_params,
 	prom_names = np.array(dataset.metainfo["prom_name"])[test_idx]
 	test_loader = DataLoader(Subset(dataset, indices=test_idx), shuffle=False, batch_size=batch_size, num_workers=num_workers)
 	model.eval()
-	test_pred, test_true, test_pred_dist, test_true_dist = predict(model, test_loader)
+	test_pred, test_true  = predict(model, test_loader)
 	# AUC, AUPR, F_in, pre, rec, MCC = misc_utils.evaluator(test_true, test_pred, out_keys=["AUC", "AUPR", "F1", "precision", "recall", "MCC"])
 
 	np.savetxt(
@@ -281,9 +275,6 @@ def get_args():
 	p.add_argument('--test_cell', type=str, default="GM12878", help="cell line on test")
 	p.add_argument('--config', type=str, default="chromosomal_cross_validation.json", help="config filename")
 
-	# 以下追加
-	p.add_argument('--use_mse', action="store_true")
-	p.add_argument('--test_on_another_data', action="store_true")
 	# ___
 	return p
 
@@ -294,9 +285,6 @@ if __name__ == "__main__":
 	np.random.seed(args.seed)
 	torch.manual_seed(args.seed)
 
-	# mse
-	args.use_mse = False
-	# ___
 
 	config = json.load(open(os.path.join(os.path.dirname(__file__), args.config)))
 
@@ -312,8 +300,9 @@ if __name__ == "__main__":
 		seq_len=config["seq_len"], 
 		bin_size=config["bin_size"], 
 		use_mark=False,
-		mask_neighbor=True, # TODO
-		mask_window=True, # TODO
+		use_mask=True,
+		# mask_neighbor=True, # TODO
+		# mask_window=True, # TODO
 		sin_encoding=False,
 		rand_shift=False,
 	)
@@ -328,8 +317,9 @@ if __name__ == "__main__":
 		seq_len=config["seq_len"], 
 		bin_size=config["bin_size"], 
 		use_mark=False,
-		mask_neighbor=True, # TODO
-		mask_window=True, # TODO
+		use_mask=True,
+		# mask_neighbor=True, # TODO
+		# mask_window=True, # TODO
 		sin_encoding=False,
 		rand_shift=False,
 	)
@@ -393,6 +383,7 @@ if __name__ == "__main__":
 			print(f"skip train phase")
 		else:
 			train_mode = True
+
 
 
 		# __train__

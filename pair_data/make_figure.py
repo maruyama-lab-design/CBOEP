@@ -189,11 +189,14 @@ def make_PosNeg_figure(args):
 	make_positive_negative_gap_ratio_fig(args, positive_negative_gap_ratio_by_df, 0.05, regionType)
 
 
-def make_distance_distribution_fugure(data_name="BENGI", data_type="original", cell_line="GM12878", bin_size=1000, X_max = 999999999999, **_):
+def make_distance_distribution_fugure_each_PN(data_name="BENGI", data_type="original", cell_line="GM12878", bin_size=1000, bottom_p = 100, **_):
 	filename = os.path.join(os.path.dirname(__file__), data_name, data_type, f"{cell_line}.csv")
 	df = pd.read_csv(filename, usecols=["label", "enhancer_distance_to_promoter"])
 	pos_dist = df[df["label"]==1]["enhancer_distance_to_promoter"].to_list()
 	neg_dist = df[df["label"]==0]["enhancer_distance_to_promoter"].to_list()
+
+	pos_dist = sorted(pos_dist)[:int(len(pos_dist) * (bottom_p / 100))]
+	neg_dist = sorted(neg_dist)[:int(len(neg_dist) * (bottom_p / 100))]
 
 	# print(pos_dist)
 
@@ -202,8 +205,8 @@ def make_distance_distribution_fugure(data_name="BENGI", data_type="original", c
 
 	# print(pos_dist)
 
-	pos_X_max = min(max(pos_dist), X_max)
-	neg_X_max = min(max(neg_dist), X_max)
+	pos_X_max = max(pos_dist)
+	neg_X_max = max(neg_dist)
 
 	pos_c = collections.Counter(pos_dist)
 	neg_c = collections.Counter(neg_dist)
@@ -222,23 +225,74 @@ def make_distance_distribution_fugure(data_name="BENGI", data_type="original", c
 		neg_X.append(x)
 		neg_Y.append(neg_c[x])
 
-	outdir = os.path.join(os.path.dirname(__file__), "figure", "distance_distribution")
+	outdir = os.path.join(os.path.dirname(__file__), "figure", "distance_distribution_each_PN")
 	os.makedirs(outdir, exist_ok=True)
 
 	plt.figure()
 	plt.bar(pos_X, pos_Y, width=bin_size, align="center", color="red")
 	plt.xlabel(f"EP distance (bin size {bin_size})")
 	plt.ylabel(f"freq")
-	plt.title(f"{data_name} {data_type} {cell_line}")
-	# plt.savefig(os.path.join(outdir, f"P_{data_name}_{data_type}_{cell_line}_{bin_size}.png"))
+	plt.title(f"{data_name} {cell_line}")
+	plt.savefig(os.path.join(outdir, f"{data_name}_{cell_line}_{bin_size}_bottom{bottom_p}.png"))
 
 	plt.figure()
 	plt.bar(neg_X, neg_Y, width=bin_size, align="center", color="blue")
 	plt.xlabel(f"EP distance (bin size {bin_size})")
 	plt.ylabel(f"freq")
 	plt.title(f"{data_name} {data_type} {cell_line}")
-	plt.savefig(os.path.join(outdir, f"N_{data_name}_{data_type}_{cell_line}_{bin_size}.png"))
+	plt.savefig(os.path.join(outdir, f"N_{data_name}_{data_type}_{cell_line}_bin{bin_size}_bottom{bottom_p}.png"))
 
+
+def make_distance_distribution_fugure_together_PN(data_name="BENGI", data_type="original", cell_line="GM12878", bin_size=1000, bottom_p = 100, **_):
+	filename = os.path.join(os.path.dirname(__file__), data_name, data_type, f"{cell_line}.csv")
+	df = pd.read_csv(filename, usecols=["label", "enhancer_distance_to_promoter"])
+
+	df = df.sort_values(by="enhancer_distance_to_promoter").reset_index()
+	df = df.loc[:int(len(df) * (bottom_p / 100)), :]
+
+	
+	pos_dist = df[df["label"]==1]["enhancer_distance_to_promoter"].to_list()
+	neg_dist = df[df["label"]==0]["enhancer_distance_to_promoter"].to_list()
+
+	print(f"positive pair: {len(pos_dist)}")
+	print(f"negative pair: {len(neg_dist)}")
+
+	pos_dist = list(map(lambda x: ((x-1)//bin_size)*bin_size+(bin_size/2), pos_dist))
+	neg_dist = list(map(lambda x: ((x-1)//bin_size)*bin_size+(bin_size/2), neg_dist))
+
+	# print(pos_dist)
+
+	pos_X_max = max(pos_dist)
+	neg_X_max = max(neg_dist)
+
+	pos_c = collections.Counter(pos_dist)
+	neg_c = collections.Counter(neg_dist)
+
+	pos_X = []
+	pos_Y = []
+	neg_X = []
+	neg_Y = []
+	for n_bin in range(int(pos_X_max*10)//(bin_size*10)+1):
+		x = n_bin * bin_size + (bin_size / 2)
+		pos_X.append(x)
+		pos_Y.append(pos_c[x])
+		# print(pos_X, pos_Y)
+	for n_bin in range(int(neg_X_max*10)//(bin_size*10)+1):
+		x = n_bin * bin_size + (bin_size / 2)
+		neg_X.append(x)
+		neg_Y.append(neg_c[x])
+
+	outdir = os.path.join(os.path.dirname(__file__), "figure", "distance_distribution_together_PN")
+	os.makedirs(outdir, exist_ok=True)
+
+	plt.figure()
+	plt.bar(pos_X, pos_Y, width=bin_size, align="center", color="red", alpha=0.6, label="positive")
+	plt.bar(neg_X, neg_Y, width=bin_size, align="center", color="blue", alpha=0.6, label="negative")
+	plt.xlabel(f"EP distance (bin size {bin_size})")
+	plt.ylabel(f"freq")
+	plt.title(f"{data_name} {data_type} {cell_line}")
+	plt.legend()
+	plt.savefig(os.path.join(outdir, f"{data_name}_{data_type}_{cell_line}_bin{bin_size}_bottom{bottom_p}.png"))
 
 
 
@@ -268,8 +322,10 @@ if __name__ == '__main__':
 			for cell in cell_line_list:
 				args.data_name = name
 				args.data_type = type
+				args.cell_line = cell
 				# print(**vars(args))
-				make_distance_distribution_fugure(**vars(args))
+				make_distance_distribution_fugure_each_PN(**vars(args), bottom_p=100, bin_size=1000)
+				make_distance_distribution_fugure_together_PN(**vars(args), bottom_p=100, bin_size=10000)
 	exit()
 
 

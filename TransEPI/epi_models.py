@@ -160,11 +160,11 @@ class TransEPI(nn.Module):
                     )
                 )
         self.fc.append(nn.Sigmoid())
-        self.fc_dist = nn.Sequential(
-                    nn.Linear(cnn_channels[-1] * 4, cnn_channels[-1]),
-                    nn.ReLU(),
-                    nn.Linear(cnn_channels[-1], 1)
-                )
+        # self.fc_dist = nn.Sequential(
+        #             nn.Linear(cnn_channels[-1] * 4, cnn_channels[-1]),
+        #             nn.ReLU(),
+        #             nn.Linear(cnn_channels[-1], 1)
+        #         )
 
 
 
@@ -247,7 +247,7 @@ class TransEPI(nn.Module):
         ), axis=1)
         del feats
         # feats = torch.cat((feats.max(dim=1)[0].squeeze(1), feats.mean(dim=1).squeeze(1)), dim=1)
-        dists = self.fc_dist(seq_embed)
+        # dists = self.fc_dist(seq_embed)
 
 
 
@@ -256,7 +256,7 @@ class TransEPI(nn.Module):
 
         # TODO return_att はdefault False??
         if return_att:
-            return seq_embed, dists, att
+            return seq_embed, att
         else:
             del att
             return seq_embed
