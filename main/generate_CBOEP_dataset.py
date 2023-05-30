@@ -9,14 +9,14 @@ import glob
 
 def extract_positive_pairs(args):
 	# load original BENGI/TargetFinder
-	original_path = os.path.join(os.path.dirname(__file__), args.input, "original", f"{args.cell}.csv")
+	original_path = os.path.join(os.path.dirname(__file__), "pair_data", args.input, "original", f"{args.cell}.csv")
 	df = pd.read_csv(original_path)
 
 	# extract only positive
 	positive_df = df[df["label"] == 1]
 
 	# data directory を この~.pyと同じ場所に作成
-	outdir = os.path.join(os.path.dirname(__file__), args.input, "positive_only")
+	outdir = os.path.join(os.path.dirname(__file__), "pair_data", args.input, "positive_only")
 	os.makedirs(outdir, exist_ok=True)
 	out_path = os.path.join(outdir, f"{args.cell}.csv")
 
@@ -25,7 +25,7 @@ def extract_positive_pairs(args):
 
 def make_bipartiteGraph(args):
 	# load positive only
-	data_path = os.path.join(os.path.dirname(__file__), args.input, "positive_only", f"{args.cell}.csv")
+	data_path = os.path.join(os.path.dirname(__file__), "pair_data", args.input, "positive_only", f"{args.cell}.csv")
 	df = pd.read_csv(data_path)
 	df_by_chrom = df.groupby("enhancer_chrom")
 
@@ -100,7 +100,7 @@ def make_bipartiteGraph(args):
 
 		assert bipartiteGraph.duplicated().sum() == 0
 
-		outdir = os.path.join(os.path.dirname(__file__), args.input, f"CBOEP_{args.dmax}", "bipartiteGraph", "preprocess")
+		outdir = os.path.join(os.path.dirname(__file__), "pair_data", args.input, f"CBOEP_{args.dmax}", "bipartiteGraph", "preprocess")
 		os.makedirs(outdir, exist_ok=True)
 		out_path = os.path.join(outdir, f"{args.cell}_{chrom}.csv")
 		bipartiteGraph.to_csv(out_path, index=False)
@@ -108,7 +108,7 @@ def make_bipartiteGraph(args):
 def maxflow(args):
 	chromList = [f"chr{i}" for i in list(range(1, 23)) + ["X"]]
 	for chrom in chromList:
-		data_path = os.path.join(os.path.dirname(__file__), args.input, f"CBOEP_{args.dmax}", "bipartiteGraph", "preprocess", f"{args.cell}_{chrom}.csv")
+		data_path = os.path.join(os.path.dirname(__file__), "pair_data", args.input, f"CBOEP_{args.dmax}", "bipartiteGraph", "preprocess", f"{args.cell}_{chrom}.csv")
 		if os.path.exists(data_path) == False:
 			continue
 		df = pd.read_csv(data_path)
@@ -152,7 +152,7 @@ def maxflow(args):
 
 		assert df.duplicated().sum() == 0
 
-		outdir = os.path.join(os.path.dirname(__file__), args.input, f"CBOEP_{args.dmax}", "bipartiteGraph", "result")
+		outdir = os.path.join(os.path.dirname(__file__), "pair_data", args.input, f"CBOEP_{args.dmax}", "bipartiteGraph", "result")
 		os.makedirs(outdir, exist_ok=True)
 		out_path = os.path.join(outdir, f"{args.cell}_{chrom}.csv")
 		df.to_csv(out_path, index=False)
@@ -171,14 +171,14 @@ def calc_distance(enh_start, enh_end, prm_start, prm_end): # TODO how to define 
 
 def concat_CBOEPnegative_and_positive(args):
 	# load positive
-	positive_path = os.path.join(os.path.dirname(__file__), args.input, "positive_only", f"{args.cell}.csv")
+	positive_path = os.path.join(os.path.dirname(__file__), "pair_data", args.input, "positive_only", f"{args.cell}.csv")
 	positive_df = pd.read_csv(positive_path)
 
 	# generate negative from maxflow result
 	negative_df = pd.DataFrame(columns=["enhancer_chrom", "promoter_chrom", "from", "to"])
 	chromList = [f"chr{i}" for i in list(range(1, 23)) + ["X"]]
 	for chrom in chromList:
-		maxflow_path = os.path.join(os.path.dirname(__file__), args.input, f"CBOEP_{args.dmax}", "bipartiteGraph", "result", f"{args.cell}_{chrom}.csv")
+		maxflow_path = os.path.join(os.path.dirname(__file__), "pair_data", args.input, f"CBOEP_{args.dmax}", "bipartiteGraph", "result", f"{args.cell}_{chrom}.csv")
 		if os.path.exists(maxflow_path) == False:
 			continue
 		maxflow_df = pd.read_csv(maxflow_path, usecols=["from", "to", "Val"])
@@ -246,21 +246,28 @@ if __name__ == "__main__":
 	config = json.load(open(os.path.join(os.path.dirname(__file__), "CBOEP_opt.json")))
 	args.input = config["input"]
 	args.dmax = config["dmax"]
-	assert args.dmax > 0
 	args.cell = config["cell"]
+	assert args.dmax > 0
 
-	for input_file in ["pair_data/BENGI", "pair_data/TargetFinder"]:
-		for d in [2500000, 5000000, 10000000, 9999999999]:
-			for cell in ["GM12878", "HeLa-S3", "HMEC", "IMR90", "K562", "NHEK"]:
-				if input_file == "pair_data/TargetFinder" and cell == "HMEC":
-					continue
+	print(f"input {args.input}")
+	print(f"max_d {args.dmax}")
+	print(f"cell {args.cell}")
+	args.outdir = os.path.join(os.path.dirname(__file__), "pair_data", args.input, f"CBOEP_{args.dmax}")
+	os.makedirs(args.outdir, exist_ok=True)
+	make_new_dataset(args)
+
+	# for input_file in ["BENGI", "TargetFinder"]:
+	# 	for d in [2500000, 5000000, 10000000, 9999999999]:
+	# 		for cell in ["GM12878", "HeLa-S3", "HMEC", "IMR90", "K562", "NHEK"]:
+	# 			if input_file == "TargetFinder" and cell == "HMEC":
+	# 				continue
 					
-				args.input, args.dmax, args.cell = input_file, d, cell
-				print(f"input {args.input}")
-				print(f"max_d {args.dmax}")
-				print(f"cell {args.cell}")
-				args.outdir = os.path.join(os.path.dirname(__file__), args.input, f"CBOEP_{args.dmax}")
-				os.makedirs(args.outdir, exist_ok=True)
-				make_new_dataset(args)
+	# 			args.input, args.dmax, args.cell = input_file, d, cell
+	# 			print(f"input {args.input}")
+	# 			print(f"max_d {args.dmax}")
+	# 			print(f"cell {args.cell}")
+	# 			args.outdir = os.path.join(os.path.dirname(__file__), "pair_data", args.input, f"CBOEP_{args.dmax}")
+	# 			os.makedirs(args.outdir, exist_ok=True)
+	# 			make_new_dataset(args)
 
 
