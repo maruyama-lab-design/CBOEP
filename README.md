@@ -1,16 +1,16 @@
-# NIMF (Negative Interaction by Maximum Flow)
+# CBOEP (Class Balanced Occurrence of Enhancers and Promoters)
 
-This repository contains files related to our work, NIMF, which generates a set of negative enhancer-promoter interactions (EPIs) from 
+This repository contains files related to our work, CBOEP, which generates a set of negative enhancer-promoter interactions (EPIs) from 
 a specified set of positive EPIs. 
 
 
 
 
-This repository contains three directories, `pair_data`, `TransEPI`, and `TargetFinder`.  
+This repository contains three directories, `main`, `TransEPI`, and `TargetFinder`.  
 
-In the directory of 'pair_data',
-we include the BENGI dataset ,TargetFinder dataset and NIMF dataset (d_max=2.5M) for each of them.
-In addition to this, you can generate the NIMF dataset of any d_max.  
+In the directory of 'main',
+we include the BENGI dataset ,TargetFinder dataset and CBOEP dataset (d_max=2.5M) for each of them.
+In addition to this, you can generate the CBOEP dataset of any d_max.  
 
 In `/TransEPI` or `/TargetFinder`,
 you can perform EPI prediction with existing EPI predictors, "TransEPI" or "TargetFinder".  
@@ -22,11 +22,10 @@ For more information on each predictor, see the following papers.
 Details of the directory structure are as follows.
 
 ```
-NIMF
-├── pair_data
-│   ├── BENGI
-│   ├── TargetFinder
-│   └── generate_NIMF_dataset.py  
+CBOEP
+├── main
+│   ├── pair_data
+│   └── generate_CBOEP_dataset.py  
 ├── TransEPI
 │   ├──   
 │   └── main.py  
@@ -36,10 +35,10 @@ NIMF
 ```
 
 
-## `pair_data` directory
+## `main` directory
 
 This directory contains enhancer-promoter interaction data.  
-NIMF data can also be generated here.
+CBOEP data can also be generated here.
 
 Two types of existing EPI data
 - BENGI
@@ -51,8 +50,8 @@ are contains in
 
 respectively.
 
-## How to generate new NIMF dataset
-`generate_NIMF_dataset.py` is the executable file to generate NIMF dataset.  
+## How to generate new CBOEP dataset
+`generate_CBOEP_dataset.py` is the executable file to generate CBOEP dataset.  
 
 ### Libraries 
 ---
@@ -68,27 +67,23 @@ respectively.
 
 | argument | default value | description |
 | :---: | :---: | ---- |
-| ```--data``` |"BENGI"|Which positive interactions to use. Only "BENGI" or "TargetFinder" is accepted.|
-| ```--NIMF_max_d``` |2500000|Upper bound of enhancer-promoter distance for newly generated negative interactions.|
-| ```--cell_type``` |"GM12878"|Cell type of the negative interactions; corresponding positive interactions are required.|
+| ```--input``` |"BENGI"|Which positive interactions to use. Only "BENGI" or "TargetFinder" is accepted.|
+| ```--dmax``` |2500000|Upper bound of enhancer-promoter distance for newly generated negative interactions.|
+| ```--cell``` |"GM12878"|Cell type of the negative interactions; corresponding positive interactions are required.|
 
-They can also be described in `NIMF_opt.json`.  
-Example of `NIMF_opt.json`:  
+They can also be described in `CBOEP_opt.json`.  
+Example of `CBOEP_opt.json`:  
 ```
 {
-    "data": "BENGI",
-    "NIMF_max_d": 3000000,
-    "cell_type": "GM12878"
+    "input": "BENGI",
+    "dmax": 3000000,
+    "cell": "GM12878"
 }
 ```
 
-NIMF dataset is generated in
-- `/{--data}/NIMF_{--NIMF_max_d}/{--cell_type}.csv`
+CBOEP dataset is generated in
+- `pair_data/{--input}/CBOEP_{--dmax}/{--cell}.csv`
 
-## `TransEPI` directory
-
-
-## `TargetFinder` directory
 
 
 
