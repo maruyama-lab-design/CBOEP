@@ -36,3 +36,8 @@ ep2vec_result
 *.tsv
 !TransEPI/data/annotation/*
 !TransEPI/data/genomic_data/*
+
+*.jpg
+*.bedgraph
+*.sh
+*.pt
