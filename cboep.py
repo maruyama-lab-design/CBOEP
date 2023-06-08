@@ -252,18 +252,5 @@ if __name__ == "__main__":
 	os.makedirs(args.outdir, exist_ok=True)
 	make_new_dataset(args)
 
-	# for input_file in ["BENGI", "TargetFinder"]:
-	# 	for d in [2500000, 5000000, 10000000, 9999999999]:
-	# 		for cell in ["GM12878", "HeLa-S3", "HMEC", "IMR90", "K562", "NHEK"]:
-	# 			if input_file == "TargetFinder" and cell == "HMEC":
-	# 				continue
-					
-	# 			args.input, args.dmax, args.cell = input_file, d, cell
-	# 			print(f"input {args.input}")
-	# 			print(f"max_d {args.dmax}")
-	# 			print(f"cell {args.cell}")
-	# 			args.outdir = os.path.join(os.path.dirname(__file__), "pair_data", args.input, f"CBOEP_{args.dmax}")
-	# 			os.makedirs(args.outdir, exist_ok=True)
-	# 			make_new_dataset(args)
 
 
