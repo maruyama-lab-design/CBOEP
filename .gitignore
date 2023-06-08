@@ -7,16 +7,8 @@ memo*
 /*.png
 !TransEPI/*.png
 *.csv
-!main/pair_data/BENGI/original/*.csv
-!main/pair_data/BENGI/CBOEP_2500000/*.csv
-!main/pair_data/BENGI/CBOEP_5000000/*.csv
-!main/pair_data/BENGI/CBOEP_10000000/*.csv
-!main/pair_data/BENGI/CBOEP_9999999999/*.csv
-!main/pair_data/TargetFinder/original/*.csv
-!main/pair_data/TargetFinder/CBOEP_2500000/*.csv
-!main/pair_data/TargetFinder/CBOEP_5000000/*.csv
-!main/pair_data/TargetFinder/CBOEP_10000000/*.csv
-!main/pair_data/TargetFinder/CBOEP_9999999999/*.csv
+!data/BENGI/*.csv
+!data/TargetFinder/*.csv
 *.fa
 *.fai
 *.bed
@@ -42,5 +34,7 @@ ep2vec_result
 *.bedpe
 *.sh
 *.pt
+
+main/*
 
 *IGV
