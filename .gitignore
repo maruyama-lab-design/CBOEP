@@ -39,5 +39,8 @@ ep2vec_result
 
 *.jpg
 *.bedgraph
+*.bedpe
 *.sh
 *.pt
+
+*IGV
