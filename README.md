@@ -26,6 +26,11 @@ Please place the required positive EPIs set for input under directory `data` (we
 
 # Datasets
 CBOEP requires a positive EPIs set as input to generate the new dataset.
+
+We already have EPIs sets for BENGI and TargetFinder,
+but if you want to generate the negative EPIs set from your EPIs set,
+please create a freely directory in ```data``` and place your EPIs set with the name ```{cell line name}.csv```.
+
 The positive EPIs set is a csv file and requires the following headers:  
 | Header | Description |
 | :---: | :---: |
@@ -48,7 +53,7 @@ The positive EPIs set is a csv file and requires the following headers:
 
 | Argument | Default value | Description |
 | :---: | :---: | ---- |
-| ```-input``` |"BENGI"|Which positive interactions to use. Only "BENGI" or "TargetFinder" is accepted.|
+| ```-input``` |"BENGI"|Which positive EPIs set to use. Only "BENGI", "TargetFinder", or the directory name you created is accepted.|
 | ```-dmax``` |2500000|Upper bound of enhancer-promoter distance for newly generated negative interactions.|
 | ```-cell``` |"GM12878"|Cell type of the negative interactions; the corresponding positive EPIs set are required.|
 
