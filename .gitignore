@@ -10,6 +10,7 @@ memo*
 !data/BENGI/*.csv
 !data/TargetFinder/*.csv
 !output/BENGI/dmax_2500000/GM12878.csv
+!output/TargetFinder/dmax_2500000/GM12878.csv
 *.fa
 *.fai
 *.bed
