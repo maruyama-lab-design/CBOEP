@@ -3,37 +3,20 @@
 This repository contains files related to our work, CBOEP, which generates a set of negative enhancer-promoter interactions (EPIs) from 
 a specified set of positive EPIs. 
 
-
-
-
-This repository contains three directories, `main`, `TransEPI`, and `TargetFinder`.  
-
-In the directory of 'main',
-we include the BENGI dataset ,TargetFinder dataset and CBOEP dataset (d_max=2.5M) for each of them.
-In addition to this, you can generate the CBOEP dataset of any d_max.  
-
-In `/TransEPI` or `/TargetFinder`,
-you can perform EPI prediction with existing EPI predictors, "TransEPI" or "TargetFinder".  
-For more information on each predictor, see the following papers.  
-- TransEPI: [Capturing large genomic contexts for accurately predicting enhancer-promoter interactions](https://academic.oup.com/bib/article-abstract/23/2/bbab577/6513727?redirectedFrom=fulltext&login=false)  
-- TargetFinder: [Enhancer-promoter interactions are encoded by complex genomic signatures on looping chromatin](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4910881/)  
-
-
-Details of the directory structure are as follows.
+Details of the directory structure of this repository are as follows.
 
 ```
 CBOEP
-├── main
-│   ├── pair_data
-│   └── generate_CBOEP_dataset.py  
-├── TransEPI
-│   ├──   
-│   └── main.py  
-└── TargetFinder
-    ├──   
-    └── main.py  
+├── cboep.py
+├── data
+├── output
+└── EPIpredictors
+    ├── TransEPI  
+    └── TargetFinder 
 ```
-
+`cboep.py` is the main execution file to generate the negative EPIs set, given the positive EPIs set such as BENGI or TargetFinder.
+Please place the required positive EPIs set for input under directory `data` (we have already placed BENGI and TargetFinder datasets as references).
+ここまで
 
 ## `main` directory
 
