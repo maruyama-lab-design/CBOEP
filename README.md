@@ -34,11 +34,11 @@ The positive EPIs set is a csv file and requires the following headers:
 | ```enhancer_chrom``` | Chromosome number of the enhancer |
 | ```enhancer_start``` | Start position of the enhancer |
 | ```enhancer_end``` | End position of the enhancer |
-| ```enhancer_name``` | Name composed of the cell line and region position to which the enhancer belongs, such as `GM12878|chr16:88874-88924` |
+| ```enhancer_name``` | Name composed of the cell line and region position to which the enhancer belongs, such as `GM12878\|chr16:88874-88924` |
 | ```promoter_chrom``` | Chromosome number of the promoter |
 | ```promoter_start``` | Start position of the promoter |
 | ```promoter_end``` | End position of the promoter |
-| ```promoter_name``` | Name composed of the cell line and region position to which the promoter belongs, such as `GM12878|chr16:103009-103010`|
+| ```promoter_name``` | Name composed of the cell line and region position to which the promoter belongs, such as `GM12878\|chr16:103009-103010`|
 
 # How to generate the new CBOEP dataset
 `cboep.py` is the executable file to generate the CBOEP dataset. 
