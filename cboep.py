@@ -29,7 +29,7 @@ def make_bipartiteGraph(args):
 	df = pd.read_csv(data_path)
 	df_by_chrom = df.groupby("enhancer_chrom")
 
-	# cromosome wise
+	# chromosome wise
 	for chrom, sub_df in df_by_chrom:
 
 		G_from = []
@@ -72,14 +72,15 @@ def make_bipartiteGraph(args):
 		enhList = set(sub_df["enhancer_name"].tolist())
 		prmList = set(sub_df["promoter_name"].tolist())
 		for enhName in enhList:
-			assert enhDict_pos.get(enhName) != None
 			for prmName in prmList:
+				assert enhDict_pos.get(enhName) != None
 				assert prmDict_pos.get(prmName) != None
 
+				if enhDict_pos[enhName].get(prmName) != None: # exist positive pair
+					assert prmDict_pos[prmName].get(enhName) != None
+					continue
+
 				enh_start, enh_end = enhName.split("|")[1].split(":")[1].split("-")
-				# enh_pos = (int(enh_start) + int(enh_end)) / 2 # TODO how to define enh position
-				# prm_pos = prmName.split("|")[0].split(":")[1].split("-")[1] # TODO how to define prm position
-				# distance = abs(int(prm_pos) - enh_pos)
 				prm_start, prm_end = prmName.split("|")[1].split(":")[1].split("-")
 				distance = calc_distance(enh_start, enh_end, prm_start, prm_end)
 
@@ -246,11 +247,14 @@ if __name__ == "__main__":
 	assert args.dmax > 0
 
 	print(f"input {args.input}")
-	print(f"max_d {args.dmax}")
+	print(f"dmax {args.dmax}")
 	print(f"cell {args.cell}")
 	args.outdir = os.path.join(os.path.dirname(__file__), "output", args.input, f"dmax_{args.dmax}")
 	os.makedirs(args.outdir, exist_ok=True)
 	make_new_dataset(args)
+
+
+
 
 
 
