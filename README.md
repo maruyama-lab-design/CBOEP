@@ -9,10 +9,7 @@ Details of the directory structure of this repository are as follows.
 CBOEP
 ├── cboep.py
 ├── data
-├── output
-└── EPIpredictors
-    ├── TransEPI  
-    └── TargetFinder 
+└── output
 ```
 `cboep.py` is the main execution file to generate the negative EPIs set, given the positive EPIs set such as BENGI or TargetFinder.
 Please place the required positive EPIs set for input under directory `data` (we have already placed BENGI and TargetFinder datasets as references).
@@ -29,7 +26,7 @@ CBOEP requires a positive EPIs set as input to generate the new dataset.
 
 We already have EPIs sets for BENGI and TargetFinder,
 but if you want to generate the negative EPIs set from your EPIs set,
-please create a freely directory in ```data``` and place your EPIs set with the name ```{cell line name}.csv```.
+please create a freely directory in ```data```.
 
 The positive EPIs set is a csv file and requires the following headers:  
 | Header | Description |
@@ -39,11 +36,11 @@ The positive EPIs set is a csv file and requires the following headers:
 | ```enhancer_chrom``` | Chromosome number of the enhancer |
 | ```enhancer_start``` | Start position of the enhancer |
 | ```enhancer_end``` | End position of the enhancer |
-| ```enhancer_name``` | Name composed of the cell line and region position to which the enhancer belongs, such as `GM12878\|chr16:88874-88924` |
+| ```enhancer_name``` | Name of the enhancer, such as `GM12878\|chr16:88874-88924` |
 | ```promoter_chrom``` | Chromosome number of the promoter |
 | ```promoter_start``` | Start position of the promoter |
 | ```promoter_end``` | End position of the promoter |
-| ```promoter_name``` | Name composed of the cell line and region position to which the promoter belongs, such as `GM12878\|chr16:103009-103010`|
+| ```promoter_name``` | Name of the promoter, such as `GM12878\|chr16:103009-103010`|
 
 # How to generate the new CBOEP dataset
 `cboep.py` is the executable file to generate the CBOEP dataset. 
@@ -53,16 +50,26 @@ The positive EPIs set is a csv file and requires the following headers:
 
 | Argument | Default value | Description |
 | :---: | :---: | ---- |
-| ```-input``` |"BENGI"|Which positive EPIs set to use. Only "BENGI", "TargetFinder", or the directory name you created is accepted.|
-| ```-dmax``` |2500000|Upper bound of enhancer-promoter distance for newly generated negative interactions.|
-| ```-cell``` |"GM12878"|Cell type of the negative interactions; the corresponding positive EPIs set are required.|
+| ```-input``` ||Which positive EPIs set to use.|
+| ```-output``` ||Path of the output EPI dataset|
+| ```-dmax``` |2500000|Upper bound of enhancer-promoter distance for newly generated negative EPIs.|
+| ```-dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
+| ```--aplha``` |1.0||
+| ```--concat``` ||Whether or not to concatenate the CBOEP negative set with the positive set given as input.
+If not given, only the CBOEP negative set will be output.|
+
+
 
 ## Execution example
 ```  
-python cboep.py -input BENGI -dmax 5000000 -cell K562
+python cboep.py \
+-infile ./data/BENGI/GM12878.csv \
+-outfile ./output/BENGI/GM12878_1.5.csv \
+-dmax 2500000 \
+-dmin 0 \
+--alpha 1.5
 ```
 
-CBOEP dataset is generated in `output/{-input}/dmax_{-dmax}/{-cell}.csv`
 
 
 
