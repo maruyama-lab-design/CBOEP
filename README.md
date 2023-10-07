@@ -64,10 +64,11 @@ If not given, only the CBOEP negative set will be output.|
 ```  
 python cboep.py \
 -infile ./data/BENGI/GM12878.csv \
--outfile ./output/BENGI/GM12878_1.5.csv \
+-outfile ./output/BENGI/dmax_2500000/GM12878.csv \
 -dmax 2500000 \
 -dmin 0 \
---alpha 1.5
+--alpha 1.0
+--concat
 ```
 
 
