@@ -4,33 +4,33 @@ import os
 import pulp
 import json
 import glob
+from math import ceil
 
 
-
-def extract_positive_pairs(args):
-	# load input BENGI/TargetFinder
-	input_path = os.path.join(os.path.dirname(__file__), "data", args.input, f"{args.cell}.csv")
-	df = pd.read_csv(input_path)
-
-	# extract only positive
-	positive_df = df[df["label"] == 1]
-
-	# data directory を この~.pyと同じ場所に作成
-	outdir = os.path.join(os.path.dirname(__file__), "data", args.input, "positive_only")
-	os.makedirs(outdir, exist_ok=True)
-	out_path = os.path.join(outdir, f"{args.cell}.csv")
-
-	positive_df.to_csv(out_path, index=False)
+# get enhancer-promoter distance
+# this is referred by dmax and dmin
+def get_ep_distance(e_start, e_end, p_start, p_end):
+	e_pos = (e_start + e_end) / 2
+	p_pos = (p_start + p_end) / 2
+	return abs(e_pos - p_pos)
 
 
-def make_bipartiteGraph(args):
+def main(args):
+	cboep_epi = pd.DataFrame(
+		columns=[
+			"label", "enhancer_distance_to_promoter",
+			"enhancer_chrom", "enhancer_start", "enhancer_end", "enhancer_name",
+			"promoter_chrom", "promoter_start", "promoter_end", "promoter_name",
+		]
+	)
+
 	# load positive only
-	data_path = os.path.join(os.path.dirname(__file__), "data", args.input, "positive_only", f"{args.cell}.csv")
-	df = pd.read_csv(data_path)
-	df_by_chrom = df.groupby("enhancer_chrom")
+	input_path = os.path.join(args.infile)
+	input_epi = pd.read_csv(input_path)
+	positive_epi = input_epi[input_epi["label"]==1]
 
 	# chromosome wise
-	for chrom, sub_df in df_by_chrom:
+	for chrom, sub_df in positive_epi.groupby("enhancer_chrom"):
 
 		G_from = []
 		G_to = []
@@ -38,11 +38,15 @@ def make_bipartiteGraph(args):
 
 		enhDict_pos = {}
 		prmDict_pos = {}
+		name2range = {}
 
 
 		for _, pair_data in sub_df.iterrows():
 			enhName = pair_data["enhancer_name"]
 			prmName = pair_data["promoter_name"]
+
+			name2range[enhName] = (pair_data["enhancer_start"], pair_data["enhancer_end"])
+			name2range[prmName] = (pair_data["promoter_start"], pair_data["promoter_end"])
 
 			if enhDict_pos.get(enhName) == None:
 				enhDict_pos[enhName] = {}
@@ -57,6 +61,7 @@ def make_bipartiteGraph(args):
 		# source => each enhancer
 		for enhName in enhDict_pos.keys():
 			cap = len(enhDict_pos[enhName])
+			cap = ceil(cap * args.alpha)
 			G_from.append("source")
 			G_to.append(enhName)
 			G_cap.append(cap)
@@ -64,6 +69,7 @@ def make_bipartiteGraph(args):
 		# each promoter => sink
 		for prmName in prmDict_pos.keys():
 			cap = len(prmDict_pos[prmName])
+			cap = ceil(cap * args.alpha)
 			G_from.append(prmName)
 			G_to.append("sink")
 			G_cap.append(cap)
@@ -80,12 +86,12 @@ def make_bipartiteGraph(args):
 					assert prmDict_pos[prmName].get(enhName) != None
 					continue
 
-				enh_start, enh_end = enhName.split("|")[1].split(":")[1].split("-")
-				prm_start, prm_end = prmName.split("|")[1].split(":")[1].split("-")
-				distance = calc_distance(enh_start, enh_end, prm_start, prm_end)
+				enh_start, enh_end = name2range[enhName]
+				prm_start, prm_end = name2range[prmName]
+				distance = get_ep_distance(enh_start, enh_end, prm_start, prm_end)
 
 				# extract pairs in consideration of dmax
-				if distance <= args.dmax:
+				if distance <= args.dmax and distance >= args.dmin:
 					G_from.append(enhName)
 					G_to.append(prmName)
 					G_cap.append(1)
@@ -101,22 +107,10 @@ def make_bipartiteGraph(args):
 
 		assert bipartiteGraph.duplicated().sum() == 0
 
-		outdir = os.path.join(os.path.dirname(__file__), "data", args.input, f"dmax_{args.dmax}", "bipartiteGraph", "preprocess")
-		os.makedirs(outdir, exist_ok=True)
-		out_path = os.path.join(outdir, f"{args.cell}_{chrom}.csv")
-		bipartiteGraph.to_csv(out_path, index=False)
-
-def maxflow(args):
-	chromList = [f"chr{i}" for i in list(range(1, 23)) + ["X"]]
-	for chrom in chromList:
-		data_path = os.path.join(os.path.dirname(__file__), "data", args.input, f"dmax_{args.dmax}", "bipartiteGraph", "preprocess", f"{args.cell}_{chrom}.csv")
-		if os.path.exists(data_path) == False:
-			continue
-		df = pd.read_csv(data_path)
-
-		from_list = df["from"].tolist()
-		to_list = df["to"].tolist()
-		cap_list = df["cap"].tolist()
+		
+		from_list = bipartiteGraph["from"].tolist()
+		to_list = bipartiteGraph["to"].tolist()
+		cap_list = bipartiteGraph["cap"].tolist()
 
 		# "z" is sum of flow from "source"
 		# Maximizing "z" is our goal
@@ -125,117 +119,82 @@ def maxflow(args):
 		problem += z
 
 		# create variables
-		df["Var"] = [pulp.LpVariable(f"x{i}", lowBound=0, upBound=cap_list[i],cat=pulp.LpInteger) for i in df.index]
+		bipartiteGraph["Var"] = [pulp.LpVariable(f"x{i}", lowBound=0, upBound=cap_list[i],cat=pulp.LpInteger) for i in bipartiteGraph.index]
 
 		# Added constraints on all vertices (flow conservation law)
 		for node in set(from_list)|set(to_list):
 			if node == "source":
 				# sum of flow from "source" == "z"
-				fromSource_df = df[df["from"] == node]
+				fromSource_df = bipartiteGraph[bipartiteGraph["from"] == node]
 				sumFlowFromSource = pulp.lpSum(fromSource_df["Var"])
 				problem += sumFlowFromSource == z
 			elif node == "sink":
 				# sum of flow to "sink" == "z"
-				toSink_df = df[df["to"] == node]
+				toSink_df = bipartiteGraph[bipartiteGraph["to"] == node]
 				sumFlowToSink = pulp.lpSum(toSink_df["Var"])
 				problem += sumFlowToSink == z
 			else:
 				# sum of flow into a vertex == sum of flow out
-				fromNowNode = df[df["from"] == node]
-				toNowNode = df[df["to"] == node]
+				fromNowNode = bipartiteGraph[bipartiteGraph["from"] == node]
+				toNowNode = bipartiteGraph[bipartiteGraph["to"] == node]
 				sumFlowFromNode = pulp.lpSum(fromNowNode["Var"])
 				sumFlowToNode = pulp.lpSum(toNowNode["Var"])
 				problem += sumFlowFromNode == sumFlowToNode
 
+
 		# solve
 		problem.solve()
-		df['Val'] = df.Var.apply(pulp.value)
+		bipartiteGraph['Val'] = bipartiteGraph.Var.apply(pulp.value)
 
-		assert df.duplicated().sum() == 0
+		assert bipartiteGraph.duplicated().sum() == 0
 
-		outdir = os.path.join(os.path.dirname(__file__), "data", args.input, f"dmax_{args.dmax}", "bipartiteGraph", "result")
-		os.makedirs(outdir, exist_ok=True)
-		out_path = os.path.join(outdir, f"{args.cell}_{chrom}.csv")
-		df.to_csv(out_path, index=False)
-
-
-def get_range_from_name(name):
-	start, end = name.split("|")[1].split(":")[1].split("-")
-	return int(start), int(end)
-
-def calc_distance(enh_start, enh_end, prm_start, prm_end): # TODO how to define distance???
-	enh_pos = (int(enh_start) + int(enh_end)) / 2
-	prm_pos = (int(prm_start) + int(prm_end)) / 2
-	distance = abs(enh_pos - prm_pos)
-	return distance
-
-
-def concat_CBOEPnegative_and_positive(args):
-	# load positive
-	positive_path = os.path.join(os.path.dirname(__file__), "data", args.input, "positive_only", f"{args.cell}.csv")
-	positive_df = pd.read_csv(positive_path)
-
-	# generate negative from maxflow result
-	negative_df = pd.DataFrame(columns=["enhancer_chrom", "promoter_chrom", "from", "to"])
-	chromList = [f"chr{i}" for i in list(range(1, 23)) + ["X"]]
-	for chrom in chromList:
-		maxflow_path = os.path.join(os.path.dirname(__file__), "data", args.input, f"dmax_{args.dmax}", "bipartiteGraph", "result", f"{args.cell}_{chrom}.csv")
-		if os.path.exists(maxflow_path) == False:
-			continue
-		maxflow_df = pd.read_csv(maxflow_path, usecols=["from", "to", "Val"])
+		bipartiteGraph = bipartiteGraph[["from", "to", "Val"]]
 
 		# drop "source" and "sink"
-		maxflow_df = maxflow_df[maxflow_df["from"] != "source"]
-		maxflow_df = maxflow_df[maxflow_df["to"] != "sink"]
-		maxflow_df = maxflow_df[maxflow_df["Val"] == 1]
+		bipartiteGraph = bipartiteGraph[bipartiteGraph["from"] != "source"]
+		bipartiteGraph = bipartiteGraph[bipartiteGraph["to"] != "sink"]
+		bipartiteGraph = bipartiteGraph[bipartiteGraph["Val"] == 1]
+		if len(bipartiteGraph) == 0:
+			continue
 
-		maxflow_df.drop("Val", axis=1, inplace=True)
-		maxflow_df["enhancer_chrom"] = chrom
-		maxflow_df["promoter_chrom"] = chrom
-
-		# concat by chrom
-		negative_df = pd.concat([negative_df, maxflow_df], axis=0, ignore_index=True)
-
-	# same format as BENGI/TargetFinder csv
-	negative_df.rename(columns={'from': 'enhancer_name', 'to': 'promoter_name'}, inplace=True)
-	negative_df["label"] = 0
-	negative_df["promoter_chrom"] = negative_df["enhancer_chrom"]
-	negative_df["enhancer_start"] = negative_df["enhancer_name"].map(get_range_from_name).map(lambda x: x[0])
-	negative_df["enhancer_end"] = negative_df["enhancer_name"].map(get_range_from_name).map(lambda x: x[1])
-	if args.input == "BENGI":
-		negative_df["promoter_start"] = negative_df["promoter_name"].map(get_range_from_name).map(lambda x: x[0]-1499)
-		negative_df["promoter_end"] = negative_df["promoter_name"].map(get_range_from_name).map(lambda x: x[1]+500)
+		bipartiteGraph.drop("Val", axis=1, inplace=True)
+		bipartiteGraph["label"] = 0
+		bipartiteGraph["enhancer_chrom"] = chrom
+		bipartiteGraph["promoter_chrom"] = chrom
+		bipartiteGraph.rename(columns={'from': 'enhancer_name', 'to': 'promoter_name'}, inplace=True)
+		bipartiteGraph["enhancer_start"] = bipartiteGraph["enhancer_name"].apply(lambda x: name2range[x][0])
+		bipartiteGraph["enhancer_end"] =  bipartiteGraph["enhancer_name"].apply(lambda x: name2range[x][1])
+		bipartiteGraph["promoter_start"] = bipartiteGraph["promoter_name"].apply(lambda x: name2range[x][0])
+		bipartiteGraph["promoter_end"] = bipartiteGraph["promoter_name"].apply(lambda x: name2range[x][1])
+		print(len(bipartiteGraph))
+		print(bipartiteGraph.columns)
+		bipartiteGraph["enhancer_distance_to_promoter"] = bipartiteGraph.apply(
+			lambda row:
+			get_ep_distance(
+				row["enhancer_start"], row["enhancer_end"],
+				row["promoter_start"], row["promoter_end"]
+			),
+			axis=1
+		)
+		
+		cboep_epi = pd.concat([cboep_epi, bipartiteGraph], axis=0, ignore_index=True)
+	
+	if args.concat:
+		new_epi = pd.concat([positive_epi, cboep_epi], axis=0, ignore_index=True)
+		new_epi.to_csv(args.outfile, index=False)
 	else:
-		negative_df["promoter_start"] = negative_df["promoter_name"].map(get_range_from_name).map(lambda x: x[0])
-		negative_df["promoter_end"] = negative_df["promoter_name"].map(get_range_from_name).map(lambda x: x[1])
-	negative_df["enhancer_distance_to_promoter"] = abs(((negative_df["enhancer_start"] + negative_df["enhancer_end"]) / 2) - 
-	((negative_df["promoter_start"] + negative_df["promoter_end"]) / 2))
-
-	# concat positive and negative
-	new_dataset = pd.concat([positive_df, negative_df], axis=0, ignore_index=True)
-	assert new_dataset.duplicated().sum() == 0
-
-	# save
-	out_path = os.path.join(args.outdir, f"{args.cell}.csv")
-	new_dataset.to_csv(out_path, index=False)
-
-
-
-
-def make_new_dataset(args):
-	extract_positive_pairs(args)
-	make_bipartiteGraph(args)
-	maxflow(args)
-	concat_CBOEPnegative_and_positive(args)
+		cboep_epi.to_csv(args.outfile, index=False)
 
 
 
 def get_args():
 	p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-	p.add_argument("-input", default="BENGI")
-	p.add_argument("--outdir", default="")
-	p.add_argument("-dmax", type=int, default=2500000)
-	p.add_argument("-cell", type=str, default="GM12878")
+	p.add_argument("-infile", default="./BENGI/GM12878.csv", help="input file path")
+	p.add_argument("-outfile", default="./output/BENGI/GM12878.csv", help="output file path")
+	p.add_argument("-dmax", type=int, default=2500000, help="maximum distance between enhancer and promoter")
+	p.add_argument("-dmin", type=int, default=0, help="minimum distance between enhancer and promoter")
+	p.add_argument("--alpha", type=float, default=1.0, help="alpha parameter for CBOEP")
+	p.add_argument("--concat", action="store_true", default=True, help="concat CBOEP negative and input positive")
 	
 	return p
 
@@ -244,14 +203,10 @@ if __name__ == "__main__":
 	p = get_args()
 	args = p.parse_args()
 
-	assert args.dmax > 0
+	assert args.dmax >= 0 and args.dmin >= 0
 
-	print(f"input {args.input}")
-	print(f"dmax {args.dmax}")
-	print(f"cell {args.cell}")
-	args.outdir = os.path.join(os.path.dirname(__file__), "output", args.input, f"dmax_{args.dmax}")
-	os.makedirs(args.outdir, exist_ok=True)
-	make_new_dataset(args)
+	os.makedirs(os.path.dirname(args.outfile), exist_ok=True)
+	main(args)
 
 
 
