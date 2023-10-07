@@ -50,7 +50,7 @@ The positive EPIs set is a csv file and requires the following headers:
 
 | Argument | Default value | Description |
 | :---: | :---: | ---- |
-| ```-input``` ||Which positive EPIs set to use.|
+| ```-input``` ||Path of the input EPI dataset.|
 | ```-output``` ||Path of the output EPI dataset|
 | ```-dmax``` |2500000|Upper bound of enhancer-promoter distance for newly generated negative EPIs.|
 | ```-dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
