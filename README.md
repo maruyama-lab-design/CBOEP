@@ -54,9 +54,8 @@ The positive EPIs set is a csv file and requires the following headers:
 | ```-output``` ||Path of the output EPI dataset|
 | ```-dmax``` |2500000|Upper bound of enhancer-promoter distance for newly generated negative EPIs.|
 | ```-dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
-| ```--aplha``` |1.0||
-| ```--concat``` ||Whether or not to concatenate the CBOEP negative set with the positive set given as input.
-If not given, only the CBOEP negative set will be output.|
+| ```--alpha``` |1.0||
+| ```--concat``` ||Whether or not to concatenate the CBOEP negative set with the positive set given as input. If not given, only the CBOEP negative set will be output.|
 
 
 
