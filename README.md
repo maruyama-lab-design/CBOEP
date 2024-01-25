@@ -108,7 +108,7 @@ python cbgs.py \
 -dmin 0 \
 --concat \
 --make_fig \
---make_figfile ./output/BENGI/dmax_2500000/GM12878.png
+--out_figfile ./output/BENGI/dmax_2500000/GM12878.png
 ```
 
 
