@@ -207,12 +207,12 @@ def CBMF(args):
 
 def get_args():
 	p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-	p.add_argument("-infile", default="./BENGI/GM12878.csv", help="input file path")
-	p.add_argument("-outfile", default="./output/BENGI/GM12878.csv", help="output file path")
+	p.add_argument("-infile", default="", help="input file path")
+	p.add_argument("-outfile", default="", help="output file path")
 	p.add_argument("-dmin", type=int, default=0, help="minimum distance between enhancer and promoter")
 	p.add_argument("-dmax", default=2500000, help="maximum distance between enhancer and promoter")
 	p.add_argument("--alpha", type=float, default=1.0, help="")
-	p.add_argument("--concat", action="store_true", default=True, help="concat CBMF negative and input positive")
+	p.add_argument("--concat", action="store_true", default=False, help="concat CBMF negative and input positive")
 	
 	return p
 
@@ -221,9 +221,8 @@ if __name__ == "__main__":
 	p = get_args()
 	args = p.parse_args()
 
-	print(args)
-
-	# assert args.dmax >= 0 and args.dmin >= 0
+	if args.dmax != "INF": # if dmax is not INF, convert to int
+		args.dmax = int(args.dmax)
 
 	os.makedirs(os.path.dirname(args.outfile), exist_ok=True)
 	CBMF(args)

@@ -17,7 +17,6 @@ def get_distance(enh, prm):
 	prm_pos = (prm_start + prm_end) / 2
 	return abs(enh_pos - prm_pos)
 
-
 def get_all_neg(pos_df, dmax):
 	enhs, prms = set(pos_df["enhancer_name"].to_list()), set(pos_df["promoter_name"].to_list())
 	all_neg = {}
@@ -64,10 +63,6 @@ def get_region_freq_dict(pos_df, now_neg):
 
 	return enh_freq, prm_freq
 
-def get_ClassBalance(pos_freq, neg_freq, alpha):
-	cb = min(alpha*pos_freq, neg_freq) / max(alpha*pos_freq, neg_freq)
-	return cb
-
 def get_neg_df(now_neg):
 	labels = [0] * len(now_neg)
 	enhs = [x.split("=")[0] for x in now_neg.keys()]
@@ -90,78 +85,6 @@ def get_neg_df(now_neg):
 	neg_df["promoter_chrom"], neg_df["promoter_start"], neg_df["promoter_end"], neg_df["promoter_name"] = prm_chorms, prm_starts, prm_ends, prms
 	return neg_df
 
-# def GibbsSampling_ratio(args):
-# 	org_df = pd.read_csv(os.path.join(args.indir, f"{args.cell}.csv"))
-# 	for chrom, org_df_by_chrom in org_df.groupby("enhancer_chrom"):
-# 		print(f"_____{chrom}_____")
-# 		pos_df = org_df_by_chrom[org_df_by_chrom["label"]==1]
-
-# 		print("preprocess...")
-# 		all_neg = get_all_neg(pos_df, args.dmax) # 全負例候補
-# 		print("choose initial negative randomly...")
-# 		np.random.shuffle(all_neg)
-# 		# now_neg = dict(zip(all_neg[:len(pos_df)], [1]*len(pos_df))) # 選択されている負例
-# 		now_neg = {}
-
-# 		print("get initial freq^+/- of every enh/prm...")
-# 		enh_freq, prm_freq = get_region_freq_dict(pos_df, now_neg)
-# 		print("calcurate initial class balance")
-
-# 		region_cnt, sum_cb = 0, 0
-# 		for enh in list(enh_freq.keys()):
-# 			sum_cb += get_ClassBalance(enh_freq[enh]["+"], enh_freq[enh]["-"], args.alpha)
-# 			region_cnt += 1
-# 		for prm in list(prm_freq.keys()):
-# 			sum_cb += get_ClassBalance(prm_freq[prm]["+"], prm_freq[prm]["-"], args.alpha)
-# 			region_cnt += 1
-
-# 		all_cb = np.zeros((args.T+1))
-# 		all_cb[0] = sum_cb
-# 		for t in tqdm(range(args.T)):
-# 			# choose one pair randomly
-# 			cand_neg = random.choice(all_neg)
-# 			cand_enh, cand_prm = cand_neg.split("=")
-# 			if now_neg.get(cand_neg) != None: # remove if it is already negative
-# 				now_neg.pop(cand_neg)
-# 				sum_cb -= get_ClassBalance(enh_freq[cand_enh]["+"], enh_freq[cand_enh]["-"], args.alpha) + get_ClassBalance(prm_freq[cand_prm]["+"], prm_freq[cand_prm]["-"], args.alpha)
-# 				enh_freq[cand_enh]["-"] -= 1
-# 				prm_freq[cand_prm]["-"] -= 1
-# 				sum_cb += get_ClassBalance(enh_freq[cand_enh]["+"], enh_freq[cand_enh]["-"], args.alpha) + get_ClassBalance(prm_freq[cand_prm]["+"], prm_freq[cand_prm]["-"], args.alpha)
-
-# 			# score if it is not selected as negative
-# 			score_0 = math.exp(get_ClassBalance(enh_freq[cand_enh]["+"], enh_freq[cand_enh]["-"], args.alpha) + get_ClassBalance(prm_freq[cand_prm]["+"], prm_freq[cand_prm]["-"], args.alpha))
-
-# 			# score if it is selected as negative
-# 			score_1 = math.exp(get_ClassBalance(enh_freq[cand_enh]["+"], enh_freq[cand_enh]["-"]+1, args.alpha) + get_ClassBalance(prm_freq[cand_prm]["+"], prm_freq[cand_prm]["-"]+1, args.alpha))
-			
-# 			# calcurate prob
-# 			prob = score_1 / (score_0 + score_1)
-
-# 			# pick as negative with prob
-# 			if random.random() < prob:
-# 				now_neg[cand_neg] = 1
-# 				sum_cb -= get_ClassBalance(enh_freq[cand_enh]["+"], enh_freq[cand_enh]["-"], args.alpha) + get_ClassBalance(prm_freq[cand_prm]["+"], prm_freq[cand_prm]["-"], args.alpha)
-# 				enh_freq[cand_enh]["-"] += 1
-# 				prm_freq[cand_prm]["-"] += 1
-# 				sum_cb += get_ClassBalance(enh_freq[cand_enh]["+"], enh_freq[cand_enh]["-"], args.alpha) + get_ClassBalance(prm_freq[cand_prm]["+"], prm_freq[cand_prm]["-"], args.alpha)
-			
-# 			# print(f"prob:{prob}")
-# 			# print(f"now neg {len(now_neg)}")
-# 			all_cb[t+1] = sum_cb
-
-# 		plt.figure()
-# 		plt.plot(range(args.T+1), all_cb/region_cnt)
-# 		plt.ylim((0, 1))
-# 		# plt.xlabel("t")
-# 		# plt.ylabel("f($D^{-}$)")
-# 		plt.title(f"{args.cell} {chrom}")
-# 		plt.savefig(os.path.join(args.outdir, f"{args.cell}_{chrom}.png"))
-		
-# 		neg_df = get_neg_df(now_neg=now_neg)
-# 		new_df = pd.concat([pos_df, neg_df], axis=0)
-# 		new_df.to_csv(os.path.join(args.outdir, f"{args.cell}_{chrom}.csv"), index=False)
-
-
 def CBGS(args):
 	org_df = pd.read_csv(args.infile)
 	neg_df = pd.DataFrame()
@@ -172,19 +95,18 @@ def CBGS(args):
 		print(f"_____{chrom}_____")
 		pos_df = org_df_by_chrom[org_df_by_chrom["label"]==1]
 
-		print("preprocess...")
-		all_neg = get_all_neg(pos_df, args.dmax) # 全負例候補
+		print("get all negative candidates..")
+		all_neg = get_all_neg(pos_df, args.dmax)
 		if len(all_neg) == 0:
 			continue
 		print("choose initial negative randomly...")
 		np.random.shuffle(all_neg)
-		now_neg = dict(zip(all_neg[:int(len(pos_df)*args.alpha)], [1]*int(len(pos_df)*args.alpha))) # 選択されている負例
-		# now_neg = {}
+		now_neg = dict(zip(all_neg[:int(len(pos_df)*args.alpha)], [1]*int(len(pos_df)*args.alpha)))
 
 		print("get initial freq^+/- of every enh/prm...")
 		enh_freq, prm_freq = get_region_freq_dict(pos_df, now_neg)
-		print("calcurate initial class balance")
 
+		print("calcurate initial score")
 		region_cnt, sum_cb = 0, 0
 		for enh in list(enh_freq.keys()):
 			sum_cb += (args.alpha * enh_freq[enh]["+"] - enh_freq[enh]["-"]) ** 2
@@ -196,10 +118,10 @@ def CBGS(args):
 		all_cb = np.zeros((args.T+1))
 		all_cb[0] = sum_cb
 		for t in tqdm(range(args.T)):
-			# 一つランダムに選ぶ
+			# pick one pair randomly
 			cand_neg = random.choice(all_neg)
 			cand_enh, cand_prm = cand_neg.split("=")
-			if now_neg.get(cand_neg) != None: # すでに負例の場合は一旦取り除く
+			if now_neg.get(cand_neg) != None: # remove if it is already negative
 				now_neg.pop(cand_neg)
 				sum_cb -= (args.alpha * enh_freq[cand_enh]["+"] - enh_freq[cand_enh]["-"]) ** 2
 				sum_cb -= (args.alpha * prm_freq[cand_prm]["+"] - prm_freq[cand_prm]["-"]) ** 2
@@ -208,10 +130,10 @@ def CBGS(args):
 				sum_cb += (args.alpha * enh_freq[cand_enh]["+"] - enh_freq[cand_enh]["-"]) ** 2
 				sum_cb += (args.alpha * prm_freq[cand_prm]["+"] - prm_freq[cand_prm]["-"]) ** 2
 
-			# 負例としない場合のcb
+			# score if it is not selected as negative
 			score_0 = math.exp(-((args.alpha * enh_freq[cand_enh]["+"] - enh_freq[cand_enh]["-"]) ** 2)) * math.exp(-((args.alpha * prm_freq[cand_prm]["+"] - prm_freq[cand_prm]["-"]) ** 2))
 
-			# 負例とする場合のcb
+			# score if it is selected as negative
 			score_1 = math.exp(-((args.alpha * enh_freq[cand_enh]["+"] - (enh_freq[cand_enh]["-"]+1)) ** 2)) * math.exp(-((args.alpha * prm_freq[cand_prm]["+"] - (prm_freq[cand_prm]["-"]+1)) ** 2))
 			
 			# calcurate prob
@@ -220,7 +142,7 @@ def CBGS(args):
 			else:
 				prob = score_1 / (score_0 + score_1)
 
-			# prob で 負例にする
+			# select as negative with prob
 			if random.random() < prob:
 				now_neg[cand_neg] = 1
 				sum_cb -= (args.alpha * enh_freq[cand_enh]["+"] - enh_freq[cand_enh]["-"]) ** 2
@@ -230,8 +152,6 @@ def CBGS(args):
 				sum_cb += (args.alpha * enh_freq[cand_enh]["+"] - enh_freq[cand_enh]["-"]) ** 2
 				sum_cb += (args.alpha * prm_freq[cand_prm]["+"] - prm_freq[cand_prm]["-"]) ** 2
 			
-			# print(f"prob:{prob}")
-			# print(f"now neg {len(now_neg)}")
 			all_cb[t+1] = sum_cb
 
 		plt.plot(range(args.T+1), all_cb/region_cnt, label=chrom)
@@ -258,19 +178,16 @@ def CBGS(args):
 def get_args():
 	p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	
-	p.add_argument("-infile", default="./data/BENGI/GM12878.csv", help="input file path")
-	p.add_argument("-outfile", default="./output/BENGI/GM12878.csv", help="output file path")
-	p.add_argument("-cell", type=str, default="GM12878", help="cell line")
+	p.add_argument("-infile", default="", help="input file path")
+	p.add_argument("-outfile", default="", help="output file path")
 	p.add_argument("-dmin", type=int, default=0, help="minimum distance between enhancer and promoter")
 	p.add_argument("-dmax", default=2500000, help="maximum distance between enhancer and promoter")
 	p.add_argument("--alpha", type=float, default=1.0)
-	p.add_argument("--T", type=float, default=40000, help="number of iteration")
-	p.add_argument("--make_fig", action="store_true", help="make figure of EPIs score")
-	p.add_argument("--out_figfile", default="./output/BENGI/GM12878.csv", help="output figure file path")
-	p.add_argument("--concat", action="store_true", default=True, help="concat CBMF negative and input positive")
+	p.add_argument("--T", type=float, default=40000, help="number of sampling iteration")
+	p.add_argument("--concat", action="store_true", default=False, help="concat CBGS negative and input positive")
 
-
-	
+	p.add_argument("--make_fig", action="store_true", help="make figure of EPIs score by sampling iteration")
+	p.add_argument("--out_figfile", default="", help="output figure file path")
 	return p
 
 
@@ -278,20 +195,8 @@ if __name__ == "__main__":
 	p = get_args()
 	args = p.parse_args()
 
-	args.dmin, args.dmax = 10000, 2500000
-	if args.dmax != "INF":
+	if args.dmax != "INF": # if dmax is not INF, convert to int
 		args.dmax = int(args.dmax)
 
-
-	# cell_BG = ["GM12878", "HeLa-S3", "HMEC", "IMR90", "K562", "NHEK"]
-	# cell_TF = ["GM12878", "HeLa-S3", "HUVEC", "IMR90", "K562", "NHEK"]
-
-	# for cell in cell_TF:
-	# 	args.cell = cell
-	# 	args.indir = os.path.join(os.path.dirname(__file__), "TargetFinder_up_to_2500000")
-	# 	args.outdir = os.path.join(os.path.dirname(__file__), "TargetFinder_up_to_2500000", "MCMC", f"dmin_{args.dmin},dmax_{args.dmax},alpha_{args.alpha}")
-	# 	print(f"cell {args.cell}")
-	# 	print(f"dmax {args.dmax}")
-	# 	print(f"alpha {args.alpha}")
-	# 	os.makedirs(args.outdir, exist_ok=True)
-	# 	GibbsSampling_mse(args)
+	os.makedirs(os.path.dirname(args.outfile), exist_ok=True)
+	CBGS(args)
