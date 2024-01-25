@@ -12,7 +12,7 @@ CBOEP
 ├── data
 └── output
 ```
-`cbmf.py` and `cbgs.py` is the main execution file of CBMF and CBGS, respectively, given the positive EPIs set such as BENGI or TargetFinder.
+`cbmf.py` and `cbgs.py` is the main execution file of CBMF and CBGS, respectively.
 Please place the required positive EPIs set for input under directory `data` (we have already placed BENGI and TargetFinder datasets as references).
 
 
@@ -38,15 +38,18 @@ The positive EPIs set is a csv file and requires the following headers:
 | ```promoter_name``` | Name of the promoter, such as `GM12878\|chr16:103009-103010`|
 
 # How to generate the new CBMF dataset
-`cbmf.py` is the executable file to generate the CBMF dataset. 
+`cbmf.py` is the executable file to generate CBMF-negative EP pairs. 
 
 
 ## Requirements
+We have tested the work in the following environments.
 
 | Library | Version |
 | :---: | :---: |
-| ```pandas``` | 1.3.4 |
-| ```pulp``` | 2.6.0 |
+|```python```|3.12.1|
+| ```numpy``` |1.26.3|
+| ```pandas``` |2.2.0|
+| ```pulp``` | 2.8.0 |
 
 
 ## Argument
@@ -58,7 +61,7 @@ The positive EPIs set is a csv file and requires the following headers:
 | ```-output``` ||Path of the output EPI dataset|
 | ```-dmax``` |2,500,000|Upper bound of enhancer-promoter distance for newly generated negative EPIs.|
 | ```-dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
-| ```--concat``` |False|Whether or not to concatenate the CBOEP negative set with the positive set given as input. If not given, only the CBMF negative set will be output.|
+| ```--concat``` |False|Whether or not to concatenate the CBMF negative set with the positive set given as input. If not given, only the CBMF negative set will be output.|
 
 
 
@@ -74,15 +77,18 @@ python cbmf.py \
 
 # How to generate the new CBGS dataset
 
-`cbgs.py` is the executable file to generate the CBGS dataset. 
+`cbgs.py` is the executable file to generate CBGS-negative EP pairs. 
 
 ## Requirements
 
+We have tested the work in the following environments.
+
 | Library | Version |
 | :---: | :---: |
-| ```pandas``` | 1.3.4 |
-| ```pulp``` | 2.6.0 |
-
+|```python```|3.12.1|
+| ```numpy``` |1.26.3|
+| ```pandas``` |2.2.0|
+| ```matplotlib``` | 3.8.2 |
 
 ## Argument
 ---
@@ -94,8 +100,9 @@ python cbmf.py \
 | ```-dmax``` |2,500,000|Upper bound of enhancer-promoter distance for newly generated negative EPIs.|
 | ```-dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
 |```--T```|40,000|Number of sampling iteration|
-| ```--concat``` |False|Whether or not to concatenate the CBOEP negative set with the positive set given as input. If not given, only the CBGS negative set will be output.|
-
+| ```--concat``` |False|If given, the CBGS negative set is concatenated with the positive set given as input. If not given, only the CBGS negative set will be output.|
+|```--make_fig```|False|If given, a figure which shows plots of the mean of positive/negative class imbalance of all enhancers and promoters for each sampling iteration is made.|
+|```--out_figfile```||If ```--make_fig``` is given, a figure is saved in this path.|
 
 
 ## Execution example
@@ -105,7 +112,9 @@ python cbgs.py \
 -outfile ./output/BENGI/dmax_2500000/GM12878.csv \
 -dmax 2500000 \
 -dmin 0 \
---concat
+--concat \
+--make_fig \
+--out_figfile ./output/BENGI/dmax_2500000/GM12878.png
 ```
 
 
