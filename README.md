@@ -37,11 +37,11 @@ The positive EPIs set is a csv file and requires the following headers:
 | ```promoter_end``` | End position of the promoter |
 | ```promoter_name``` | Name of the promoter, such as `GM12878\|chr16:103009-103010`|
 
-# How to generate the new CBMF dataset
+# How to generate **CBMF**-negative pairs
 `cbmf.py` is the executable file to generate CBMF-negative EP pairs. 
 
 
-## Requirements
+## CBMF Requirements
 We have tested the work in the following environments.
 
 | Library | Version |
@@ -52,7 +52,7 @@ We have tested the work in the following environments.
 | ```pulp``` | 2.8.0 |
 
 
-## Argument
+## CBMF Argument
 ---
 
 | Argument | Default value | Description |
@@ -65,7 +65,7 @@ We have tested the work in the following environments.
 
 
 
-## Execution example
+## CBMF Execution example
 ```  
 python cbmf.py \
 -infile ./data/BENGI/GM12878.csv \
@@ -75,11 +75,11 @@ python cbmf.py \
 --concat
 ```
 
-# How to generate the new CBGS dataset
+# How to generate **CBGS**-negative EP pairs
 
 `cbgs.py` is the executable file to generate CBGS-negative EP pairs. 
 
-## Requirements
+## CBGS Requirements
 
 We have tested the work in the following environments.
 
@@ -90,7 +90,7 @@ We have tested the work in the following environments.
 | ```pandas``` |2.2.0|
 | ```matplotlib``` | 3.8.2 |
 
-## Argument
+## CBGS Argument
 ---
 
 | Argument | Default value | Description |
@@ -101,11 +101,11 @@ We have tested the work in the following environments.
 | ```-dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
 |```--T```|40,000|Number of sampling iteration|
 | ```--concat``` |False|If given, the CBGS negative set is concatenated with the positive set given as input. If not given, only the CBGS negative set will be output.|
-|```--make_fig```|False|If given, a figure which shows plots of the mean of positive/negative class imbalance of all enhancers and promoters for each sampling iteration is made.|
+|```--make_fig```|False|If given, a figure which shows plots of the mean of *positive/negative class imbalance* of all enhancers and promoters for each sampling iteration is made.|
 |```--out_figfile```||If ```--make_fig``` is given, a figure is saved in this path.|
 
 
-## Execution example
+## CBGS Execution example
 ```  
 python cbgs.py \
 -infile ./data/BENGI/GM12878.csv \
