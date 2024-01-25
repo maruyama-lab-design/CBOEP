@@ -6,7 +6,7 @@ import random
 import math
 import matplotlib.pyplot as plt
 
-from tqdm import tqdm
+# from tqdm import tqdm
 
 
 def get_distance(enh, prm):
@@ -20,7 +20,7 @@ def get_distance(enh, prm):
 def get_all_neg(pos_df, dmax):
 	enhs, prms = set(pos_df["enhancer_name"].to_list()), set(pos_df["promoter_name"].to_list())
 	all_neg = {}
-	for enh in tqdm(enhs):
+	for enh in enhs:
 		for prm in prms:
 			dist = get_distance(enh, prm)
 			if dist > dmax:
@@ -117,7 +117,7 @@ def CBGS(args):
 
 		all_cb = np.zeros((args.T+1))
 		all_cb[0] = sum_cb
-		for t in tqdm(range(args.T)):
+		for t in range(args.T):
 			# pick one pair randomly
 			cand_neg = random.choice(all_neg)
 			cand_enh, cand_prm = cand_neg.split("=")
@@ -166,8 +166,8 @@ def CBGS(args):
 		neg_df.to_csv(args.outfile, index=False)
 
 
-	plt.xlabel("t")
-	plt.ylabel("EPIs score")
+	plt.xlabel("sampling iteration")
+	plt.ylabel("Mean of p/n class imbalance")
 	plt.legend(ncol=5, fontsize="small")
 	if args.make_fig:
 		plt.savefig(args.out_figfile)
@@ -199,4 +199,6 @@ if __name__ == "__main__":
 		args.dmax = int(args.dmax)
 
 	os.makedirs(os.path.dirname(args.outfile), exist_ok=True)
+	if args.make_fig:
+		os.makedirs(os.path.dirname(args.out_figfile), exist_ok=True)
 	CBGS(args)
