@@ -106,9 +106,9 @@ python cbgs.py \
 -outfile ./output/BENGI/dmax_2500000/GM12878.csv \
 -dmax 2500000 \
 -dmin 0 \
---concat
---make_fig
---make_figfile ./output/BENGI/dmax_2500000/GM12878.png \
+--concat \
+--make_fig \
+--make_figfile ./output/BENGI/dmax_2500000/GM12878.png
 ```
 
 
