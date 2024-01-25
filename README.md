@@ -58,7 +58,7 @@ The positive EPIs set is a csv file and requires the following headers:
 | ```-output``` ||Path of the output EPI dataset|
 | ```-dmax``` |2,500,000|Upper bound of enhancer-promoter distance for newly generated negative EPIs.|
 | ```-dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
-| ```--concat``` |False|Whether or not to concatenate the CBOEP negative set with the positive set given as input. If not given, only the CBMF negative set will be output.|
+| ```--concat``` |False|Whether or not to concatenate the CBMF negative set with the positive set given as input. If not given, only the CBMF negative set will be output.|
 
 
 
@@ -94,8 +94,9 @@ python cbmf.py \
 | ```-dmax``` |2,500,000|Upper bound of enhancer-promoter distance for newly generated negative EPIs.|
 | ```-dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
 |```--T```|40,000|Number of sampling iteration|
-| ```--concat``` |False|Whether or not to concatenate the CBOEP negative set with the positive set given as input. If not given, only the CBGS negative set will be output.|
-
+| ```--concat``` |False|If given, the CBGS negative set is concatenated with the positive set given as input. If not given, only the CBGS negative set will be output.|
+|```--make_fig```|False|If given, a figure which shows plots of the mean of positive/negative class imbalance of all enhancers and promoters for each sampling iteration is made.|
+|```--make_figfile```||If ```--make_fig``` is given, a figure is saved in this path.|
 
 
 ## Execution example
@@ -106,6 +107,8 @@ python cbgs.py \
 -dmax 2500000 \
 -dmin 0 \
 --concat
+--make_fig
+--make_figfile ./output/BENGI/dmax_2500000/GM12878.png \
 ```
 
 
