@@ -1,18 +1,9 @@
-# CBMF (Class Balanced negative set by Maximum-Flow) and CBGS (Class Balanced negative set by Gibbs Sampling)
+# Generators of Negative enhancer-promoter pairs, CBMF (Class Balanced negative set by Maximum-Flow) and CBGS (Class Balanced negative set by Gibbs Sampling)
 
-This repository contains files related to our methods, CBMF and CBGS, which generate a set of negative enhancer-promoter interactions (EPIs) given a set of positive EPIs. 
+This repository contains files related to our methods, CBMF and CBGS, which generate a set of negative enhancer-promoter interactions (EPIs) from a set of positive EPIs. 
 
-Details of the directory structure of this repository are as follows.
 
-```
-CBOEP (Repository)
-├── cbmf.py
-├── cbgs.py
-├── input_to_neg_generator
-├── output_from_neg_generator
-└── EPI_predictor
-```
-`cbmf.py` and `cbgs.py` is the main execution file of CBMF and CBGS, respectively.
+`cbmf.py` and `cbgs.py` are  the main execution file of CBMF and CBGS, respectively.
 
 
 
