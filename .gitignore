@@ -45,6 +45,6 @@ EPIpredictor/*
 EPIpredictor(unused)/*
 output/*
 input_to_neg_generator/*
-output_neg_generator/*
+# output_neg_generator/*
 
 
