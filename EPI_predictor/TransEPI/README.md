@@ -10,8 +10,13 @@ We have tested the work in the following environments.
 
 | Library | Version |
 | :---: | :---: |
-|```python```|3.9.x|
-|```tqdm```|3.9.x|
+|```python```|3.8.18|
+|```pytorch```|2.2.0|
+|```cudatoolkit```|11.8.0|
+|```pandas```|2.0.3|
+|```tqdm```||
+|```matplotlib```|3.2.2|
+|```tensorboard```|2.16.2|
 
 
 
@@ -64,9 +69,6 @@ python cross_validation.py \
 --tensorboard_dir ./test/tensorboard/normalized_BENGI/GM12878/ \
 --use_weighted_bce 
 ```
-
-This command is included in `cross_validation.sh`.
-
 
 
 # License

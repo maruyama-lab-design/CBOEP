@@ -64,9 +64,6 @@ python cross_validation.py \
 --use_window
 ```
 
-This command is included in `cross_validation.sh`.
-
-
 # License
 
 GNU General Public License v3.0 is used in https://github.com/shwhalen/targetfinder/blob/master/LICENSE.
