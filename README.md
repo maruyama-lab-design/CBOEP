@@ -46,9 +46,9 @@ We have tested the work in the following environments.
 
 | Library | Version |
 | :---: | :---: |
-|```python```|3.12.1|
-| ```numpy``` |1.26.3|
-| ```pandas``` |2.2.0|
+|```python```|3.8.0|
+| ```numpy``` |1.18.1|
+| ```pandas``` |1.0.1|
 | ```pulp``` | 2.8.0 |
 
 
@@ -69,7 +69,7 @@ We have tested the work in the following environments.
 ```  
 python cbmf.py \
 -infile ./input_to_neg_generator/normalized_BENGI/GM12878.csv \
--outfile ./output_from_neg_generator/normalized_BENGI/GM12878.csv \
+-outfile ./output_from_neg_generator/BENGI-P_CBMF-N/GM12878.csv \
 -dmax 2500000 \
 -dmin 0 \
 --concat
@@ -88,10 +88,10 @@ We have tested the work in the following environments.
 
 | Library | Version |
 | :---: | :---: |
-|```python```|3.12.1|
-| ```numpy``` |1.26.3|
-| ```pandas``` |2.2.0|
-| ```matplotlib``` | 3.8.2 |
+|```python```|3.8.0|
+| ```numpy``` |1.18.1|
+| ```pandas``` |1.0.1|
+| ```matplotlib``` | 3.2.2 |
 
 ## CBGS Argument
 ---
@@ -112,12 +112,12 @@ We have tested the work in the following environments.
 ```  
 python cbgs.py \
 -infile ./input_to_neg_generator/normalized_BENGI/GM12878.csv \
--outfile ./output_from_neg_generator/BENGI-P_CBGS-N/dmax_2500000/GM12878.csv \
+-outfile ./output_from_neg_generator/BENGI-P_CBGS-N/GM12878.csv \
 -dmax 2500000 \
 -dmin 0 \
 --concat \
 --make_fig \
---out_figfile ./output_from_neg_generator/BENGI-P_CBGS-N/dmax_2500000/GM12878.png
+--out_figfile ./output_from_neg_generator/BENGI-P_CBGS-N/GM12878.png
 ```
 
 
