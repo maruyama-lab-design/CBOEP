@@ -43,6 +43,8 @@ main/*
 
 EPIpredictor/*
 EPIpredictor(unused)/*
+EPI_predictor/TargetFinder/features/*
+EPI_predictor/TransEPI/genomic_data/*
 output/*
 *.csv
 !input_to_neg_generator/*/*.csv

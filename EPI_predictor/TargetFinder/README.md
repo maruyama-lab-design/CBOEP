@@ -10,8 +10,11 @@ We have tested the work in the following environments.
 
 | Library | Version |
 | :---: | :---: |
-|```python```|3.9.x|
-|```joblib```||
+|```python```|3.8.0|
+|```pandas```|2.0.3|
+|```joblib```|1.3.2|
+|```scipy```|1.10.1|
+|```scilit-learn```|1.3.0|
 
 
 ## Data Preprocessing
@@ -32,6 +35,9 @@ python preprocess.py \
 --use_window  \
 --data_split 20
 ```
+
+If the program does not work correctly due to insufficient memory,
+increasing the value of ```--data_split``` can solve the memory shortage problem.
 
 
 
