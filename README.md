@@ -37,11 +37,11 @@ please note that your EPIs set should be csv format with the following columns:
 | ```promoter_end``` | End position of the promoter |
 | ```promoter_name``` | Name of the promoter, such as `GM12878\|chr16:103009-103010`|
 
-# How to generate the new CBMF dataset
+# How to generate **CBMF**-negative pairs
 `cbmf.py` is the executable file to generate CBMF-negative EP pairs. 
 
 
-## Requirements
+## CBMF Requirements
 We have tested the work in the following environments.
 
 | Library | Version |
@@ -52,7 +52,7 @@ We have tested the work in the following environments.
 | ```pulp``` | 2.8.0 |
 
 
-## Argument
+## CBMF Argument
 ---
 
 | Argument | Default value | Description |
@@ -65,7 +65,7 @@ We have tested the work in the following environments.
 
 
 
-## Execution example
+## CBMF Execution example
 ```  
 python cbmf.py \
 -infile ./input_to_neg_generator/normalized_BENGI/GM12878.csv \
@@ -82,7 +82,7 @@ python cbmf.py \
 
 `cbgs.py` is the executable file to generate CBGS-negative EP pairs. 
 
-## Requirements
+## CBGS Requirements
 
 We have tested the work in the following environments.
 
@@ -93,7 +93,7 @@ We have tested the work in the following environments.
 | ```pandas``` |2.2.0|
 | ```matplotlib``` | 3.8.2 |
 
-## Argument
+## CBGS Argument
 ---
 
 | Argument | Default value | Description |
@@ -108,7 +108,7 @@ We have tested the work in the following environments.
 |```--out_figfile```||If ```--make_fig``` is given, a figure is saved in this path.|
 
 
-## Execution example
+## CBGS Execution example
 ```  
 python cbgs.py \
 -infile ./input_to_neg_generator/normalized_BENGI/GM12878.csv \
