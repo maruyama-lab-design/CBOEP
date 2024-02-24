@@ -1,31 +1,31 @@
 # CBMF (Class Balanced negative set by Maximum-Flow) and CBGS (Class Balanced negative set by Gibbs Sampling)
 
-This repository contains files related to our work, CBMF and CBGS, which generate a set of negative enhancer-promoter interactions (EPIs) from 
-a specified set of positive EPIs. 
+This repository contains files related to our methods, CBMF and CBGS, which generate a set of negative enhancer-promoter interactions (EPIs) given a set of positive EPIs. 
 
 Details of the directory structure of this repository are as follows.
 
 ```
-CBOEP
+CBOEP (Repository)
 ├── cbmf.py
 ├── cbgs.py
-├── data
-└── output
+├── input_to_neg_generator
+├── output_from_neg_generator
+└── EPI_predictor
 ```
 `cbmf.py` and `cbgs.py` is the main execution file of CBMF and CBGS, respectively.
-Please place the required positive EPIs set for input under directory `data` (we have already placed BENGI and TargetFinder datasets as references).
+
 
 
 # Datasets
 CBMF and CBGS require a positive EPIs set as input to generate the new dataset.
 
-We already have EPIs sets for BENGI and TargetFinder,
-but if you want to generate the negative EPIs set from your EPIs set,
-please create a freely directory in ```data```.
+We already have EPIs sets for BENGI and TargetFinder in ```input_to_neg_generator```.
 
-The positive EPIs set is a csv file and requires the following headers:  
-| Header | Description |
-| :---: | :---: |
+If you want to generate the negative EPIs set from your EPIs set,
+please note that your EPIs set should be csv format with the following columns:
+
+| Column | Description |
+| :---: | --- |
 | ```label``` | ```1``` for positive EPI, ```0``` for negative EPI |
 | ```enhancer_distance_to_promoter``` | Distance between the enhancer and the promoter |
 | ```enhancer_chrom``` | Chromosome number of the enhancer |
@@ -57,8 +57,8 @@ We have tested the work in the following environments.
 
 | Argument | Default value | Description |
 | :---: | :---: | ---- |
-| ```-input``` ||Path of the input EPI dataset.|
-| ```-output``` ||Path of the output EPI dataset|
+| ```-input``` ||Path to the input EPI dataset.|
+| ```-output``` ||Path to the output EPI dataset|
 | ```-dmax``` |2,500,000|Upper bound of enhancer-promoter distance for newly generated negative EPIs.|
 | ```-dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
 | ```--concat``` |False|Whether or not to concatenate the CBMF negative set with the positive set given as input. If not given, only the CBMF negative set will be output.|
@@ -68,12 +68,15 @@ We have tested the work in the following environments.
 ## Execution example
 ```  
 python cbmf.py \
--infile ./data/BENGI/GM12878.csv \
--outfile ./output/BENGI/dmax_2500000/GM12878.csv \
+-infile ./input_to_neg_generator/normalized_BENGI/GM12878.csv \
+-outfile ./output_from_neg_generator/normalized_BENGI/GM12878.csv \
 -dmax 2500000 \
 -dmin 0 \
 --concat
 ```
+
+
+
 
 # How to generate the new CBGS dataset
 
@@ -95,26 +98,26 @@ We have tested the work in the following environments.
 
 | Argument | Default value | Description |
 | :---: | :---: | ---- |
-| ```-input``` ||Path of the input EPI dataset.|
-| ```-output``` ||Path of the output EPI dataset|
+| ```-input``` ||Path to the input EPI dataset.|
+| ```-output``` ||Path to the output EPI dataset|
 | ```-dmax``` |2,500,000|Upper bound of enhancer-promoter distance for newly generated negative EPIs.|
 | ```-dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
 |```--T```|40,000|Number of sampling iteration|
-| ```--concat``` |False|If given, the CBGS negative set is concatenated with the positive set given as input. If not given, only the CBGS negative set will be output.|
-|```--make_fig```|False|If given, a figure which shows plots of the mean of positive/negative class imbalance of all enhancers and promoters for each sampling iteration is made.|
+| ```--concat``` ||If given, the CBGS negative set is concatenated with the positive set given as input. If not given, only the CBGS negative set will be output.|
+|```--make_fig```||If given, a figure which shows plots of the mean of positive/negative class imbalance of all enhancers and promoters for each sampling iteration is made.|
 |```--out_figfile```||If ```--make_fig``` is given, a figure is saved in this path.|
 
 
 ## Execution example
 ```  
 python cbgs.py \
--infile ./data/BENGI/GM12878.csv \
--outfile ./output/BENGI/dmax_2500000/GM12878.csv \
+-infile ./input_to_neg_generator/normalized_BENGI/GM12878.csv \
+-outfile ./output_from_neg_generator/BENGI-P_CBGS-N/dmax_2500000/GM12878.csv \
 -dmax 2500000 \
 -dmin 0 \
 --concat \
 --make_fig \
---out_figfile ./output/BENGI/dmax_2500000/GM12878.png
+--out_figfile ./output_from_neg_generator/BENGI-P_CBGS-N/dmax_2500000/GM12878.png
 ```
 
 
