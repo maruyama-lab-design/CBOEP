@@ -78,7 +78,7 @@ python cbmf.py \
 
 
 
-# How to generate the new CBGS dataset
+# How to generate **CBGS**-negative pairs
 
 `cbgs.py` is the executable file to generate CBGS-negative EP pairs. 
 
