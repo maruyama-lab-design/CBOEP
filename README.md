@@ -46,8 +46,8 @@ We have tested the work in the following environments.
 
 | Argument | Default value | Description |
 | :---: | :---: | ---- |
-| ```-input``` ||Path to the input EPI dataset.|
-| ```-output``` ||Path to the output EPI dataset|
+| ```-input``` ||Path to an input EPI dataset file.|
+| ```-output``` ||Path to an output EPI dataset file.|
 | ```-dmax``` |2,500,000|Upper bound of enhancer-promoter distance for newly generated negative EPIs.|
 | ```-dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
 | ```--concat``` |False|Whether or not to concatenate the CBMF negative set with the positive set given as input. If not given, only the CBMF negative set will be output.|
@@ -81,8 +81,8 @@ We have tested the work in the following environments.
 
 | Argument | Default value | Description |
 | :---: | :---: | ---- |
-| ```-input``` ||Path to the input EPI dataset.|
-| ```-output``` ||Path to the output EPI dataset|
+| ```-input``` ||Path to an input EPI dataset file.|
+| ```-output``` ||Path to an output EPI dataset file.|
 | ```-dmax``` |2,500,000|Upper bound of enhancer-promoter distance for newly generated negative EPIs.|
 | ```-dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
 |```--T```|40,000|Number of sampling iteration|
