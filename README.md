@@ -46,10 +46,10 @@ We have tested the work in the following environments.
 
 | Argument | Default value | Description |
 | :---: | :---: | ---- |
-| ```-input``` ||Path to an input EPI dataset file.|
-| ```-output``` ||Path to an output EPI dataset file.|
-| ```-dmax``` |2,500,000|Upper bound of enhancer-promoter distance for newly generated negative EPIs.|
-| ```-dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
+| ```-i``` ||Path to an input EPI dataset file.|
+| ```-o``` ||Path to an output EPI dataset file.|
+| ```--dmax``` |2,500,000|Upper bound of enhancer-promoter distance for newly generated negative EPIs.|
+| ```--dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
 | ```--concat``` |False|Whether or not to concatenate the CBMF negative set with the positive set given as input. If not given, only the CBMF negative set will be output.|
 
 
@@ -57,8 +57,8 @@ We have tested the work in the following environments.
 ## CBMF Execution example
 ```  
 python cbmf.py \
--infile ./input_to_neg_generator/normalized_BENGI/GM12878.csv \
--outfile ./output_from_neg_generator/BENGI-P_CBMF-N/GM12878.csv \
+-i ./input_to_neg_generator/normalized_BENGI/GM12878.csv \
+-o ./output_from_neg_generator/BENGI-P_CBMF-N/GM12878.csv \
 -dmax 2500000 \
 -dmin 0 \
 --concat
@@ -81,10 +81,10 @@ We have tested the work in the following environments.
 
 | Argument | Default value | Description |
 | :---: | :---: | ---- |
-| ```-input``` ||Path to an input EPI dataset file.|
-| ```-output``` ||Path to an output EPI dataset file.|
-| ```-dmax``` |2,500,000|Upper bound of enhancer-promoter distance for newly generated negative EPIs.|
-| ```-dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
+| ```-i``` ||Path to an input EPI dataset file.|
+| ```-o``` ||Path to an output EPI dataset file.|
+| ```--dmax``` |2,500,000|Upper bound of enhancer-promoter distance for newly generated negative EPIs.|
+| ```--dmin``` |0|Lower bound of enhancer-promoter distance for newly generated negative EPIs.|
 |```--T```|40,000|Number of sampling iteration|
 | ```--concat``` ||If given, the CBGS negative set is concatenated with the positive set given as input. If not given, only the CBGS negative set will be output.|
 |```--make_fig```||If given, a figure which shows plots of the mean of positive/negative class imbalance of all enhancers and promoters for each sampling iteration is made.|
@@ -94,10 +94,10 @@ We have tested the work in the following environments.
 ## CBGS Execution example
 ```  
 python cbgs.py \
--infile ./input_to_neg_generator/normalized_BENGI/GM12878.csv \
--outfile ./output_from_neg_generator/BENGI-P_CBGS-N/GM12878.csv \
--dmax 2500000 \
--dmin 0 \
+-i ./input_to_neg_generator/normalized_BENGI/GM12878.csv \
+-o ./output_from_neg_generator/BENGI-P_CBGS-N/GM12878.csv \
+--dmax 2500000 \
+--dmin 0 \
 --concat \
 --make_fig \
 --out_figfile ./output_from_neg_generator/BENGI-P_CBGS-N/GM12878.png
