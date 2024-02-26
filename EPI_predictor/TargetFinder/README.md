@@ -21,17 +21,17 @@ We have tested the work in the following environments.
 
 
 Before running,
-download the genomic features folder from Onedrive https://qu365-my.sharepoint.com/:f:/g/personal/maruyama_osamu_158_m_kyushu-u_ac_jp/Eq4u59Q5ruhDq9IhyvhuyywB2Nb_6ud5WhD6bPcmvj8mbQ?e=aiMEND and place it in the same location as `cross_validation.py`.
+download the genomic features folder from [Onedrive](https://qu365-my.sharepoint.com/:f:/g/personal/maruyama_osamu_158_m_kyushu-u_ac_jp/Eq4u59Q5ruhDq9IhyvhuyywB2Nb_6ud5WhD6bPcmvj8mbQ?e=aiMEND) and place it in the same location as `cross_validation.py`.
 
 
 Then, this genomic features must be added to the EPI dataset using `preprocess.py`.
-The following command adds genomic data to EPI data whose path is given in `-infile`.
+The following command adds genomic data to EPI data whose file path is given in `-i`.
 
 ```
 python preprocess.py \
--infile  ../../input_to_neg_generator/normalized_BENGI/GM12878.csv \
--outfile  ../../featured_EPI/normalized_BENGI/GM12878.csv \
--cell GM12878 \
+-i  ../../input_to_neg_generator/normalized_BENGI/GM12878.csv \
+-o  ../../featured_EPI/normalized_BENGI/GM12878.csv \
+--cell GM12878 \
 --use_window  \
 --data_split 20
 ```
@@ -47,8 +47,8 @@ increasing the value of ```--data_split``` can solve the memory shortage problem
 
 | Argument | Default value | Description |
 | :---: | :---: | ---- |
-| ```-train_EPI``` ||Path to the EPI dataset (added genomic features) to be used for training.|
-| ```-test_EPI``` ||Path to the EPI dataset (added genomic features) to be used for test.|
+| ```--train_EPI``` ||Path to an EPI dataset file (added genomic features) to be used for training.|
+| ```--test_EPI``` ||Path to an EPI dataset file (added genomic features) to be used for test.|
 | ```--pred_dir``` |./preds/|Directory to save prediction results.|
 | ```--use_window``` ||If not given, only enhancer and promoter regions are used.|
 
@@ -58,8 +58,8 @@ increasing the value of ```--data_split``` can solve the memory shortage problem
 
 ```
 python cross_validation.py \
--train_EPI ../../featured_EPI/normalized_BENGI/GM12878.csv \
--test_EPI ../../featured_EPI/normalized_BENGI/GM12878.csv \
+--train_EPI ../../featured_EPI/normalized_BENGI/GM12878.csv \
+--test_EPI ../../featured_EPI/normalized_BENGI/GM12878.csv \
 --pred_dir ./prediction/normalized_BENGI/GM12878/ \
 --use_window
 ```

@@ -125,8 +125,8 @@ def test(classifier, df, use_window, test_chroms, fold_idx, pred_dir):
 
 def get_args():
 	p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-	p.add_argument("-train_EPI")
-	p.add_argument("-test_EPI")
+	p.add_argument("--train_EPI", required=True)
+	p.add_argument("--test_EPI", required=True)
 	p.add_argument("--pred_dir", default="./preds/")
 	p.add_argument("--use_window", action="store_true")
 

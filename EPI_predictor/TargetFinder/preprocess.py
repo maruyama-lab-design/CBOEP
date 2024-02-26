@@ -107,9 +107,9 @@ def data_split(infile, n_split = 1):
 def get_args():
 	p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	# p.add_argument("--use_config", type=int, default=0)
-	p.add_argument("-infile", default="")	
-	p.add_argument("-outfile", default="")
-	p.add_argument("-cell", default="")
+	p.add_argument("-i", "--infile", help="input file path")	
+	p.add_argument("-o", "--outfile", help="output file path")
+	p.add_argument("--cell", required=True, help="cell type")
 	p.add_argument("--use_window", action="store_true")
 	p.add_argument("--data_split", type=int, default=20)
 
