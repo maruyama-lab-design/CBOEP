@@ -41,8 +41,8 @@ Then, please describe as follows in the variable "feats_config" in the `opt.json
 | :---: | :---: | ---- |
 | ```--train_mode``` ||If given, the model is trained.|
 | ```--test_mode``` ||If given, the model is tested.|
-| ```--train_EPI``` ||Path to the EPI dataset to be used for training.|
-| ```--test_EPI``` ||Path to the EPI dataset to be used for test.|
+| ```--train_EPI``` ||Path to an EPI dataset file to be used for training.|
+| ```--test_EPI``` ||Path to an EPI dataset file to be used for test.|
 | ```--train_cell``` ||Name of the cell line the training EPI dataset belongs to.|
 | ```--test_cell``` ||Name of the cell line the test EPI dataset belongs to.|
 | ```--model_dir``` |./models/|Directory to save trained models.|
