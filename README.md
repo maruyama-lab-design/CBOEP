@@ -11,11 +11,12 @@ positive sets used in the work of TargetFinder are stored in
 directory ```input_to_neg_generator```.
 
 If you want to generate negative EPI sets from a positive EPI set,
-please note that the positive set should be in the csv format with the following columns:
+please note that 
+the positive set should be in the csv format with the following columns:
 
 | Column | Description |
 | :---: | --- |
-| ```label``` | ```1``` for positive EPI, ```0``` for negative EPI |
+| ```label``` | Numeric ```1``` for positive EPI, ```0``` for negative EPI |
 | ```enhancer_distance_to_promoter``` | Distance between the enhancer and the promoter |
 | ```enhancer_chrom``` | Chromosome number of the enhancer |
 | ```enhancer_start``` | Start position of the enhancer |
@@ -26,6 +27,8 @@ please note that the positive set should be in the csv format with the following
 | ```promoter_end``` | End position of the promoter |
 | ```promoter_name``` | Name of the promoter, such as `GM12878\|chr16:103009-103010`|
 
+If you want to use an EPI set to an EPI predictor in /EPI_predictor,
+the reference genome version shold be GRCh37/hg19.
 
 ## CBMF Requirements
 We have tested the work in the following environments.
