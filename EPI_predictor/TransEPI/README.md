@@ -41,10 +41,10 @@ Then, please describe as follows in the variable "feats_config" in the `opt.json
 | :---: | :---: | ---- |
 | ```--train_mode``` ||If given, the model is trained.|
 | ```--test_mode``` ||If given, the model is tested.|
-| ```-train_EPI``` ||Path to the EPI dataset to be used for training.|
-| ```-test_EPI``` ||Path to the EPI dataset to be used for test.|
-| ```-train_cell``` ||Name of the cell line the training EPI dataset belongs to.|
-| ```-test_cell``` ||Name of the cell line the test EPI dataset belongs to.|
+| ```--train_EPI``` ||Path to the EPI dataset to be used for training.|
+| ```--test_EPI``` ||Path to the EPI dataset to be used for test.|
+| ```--train_cell``` ||Name of the cell line the training EPI dataset belongs to.|
+| ```--test_cell``` ||Name of the cell line the test EPI dataset belongs to.|
 | ```--model_dir``` |./models/|Directory to save trained models.|
 | ```--pred_dir``` |./preds/|Directory to save prediction results.|
 | ```--tensorboard_dir``` |./tensorboard/|Directory to save tensorborad logs.|
@@ -60,10 +60,10 @@ Then, please describe as follows in the variable "feats_config" in the `opt.json
 python cross_validation.py \
 --train_mode \
 --test_mode \
--train_EPI ../../input_to_neg_generator/normalized_BENGI/GM12878.csv \
--test_EPI ../../input_to_neg_generator/normalized_BENGI/GM12878.csv \
--train_cell GM12878 \
--test_cell GM12878 \
+--train_EPI ../../input_to_neg_generator/normalized_BENGI/GM12878.csv \
+--test_EPI ../../input_to_neg_generator/normalized_BENGI/GM12878.csv \
+--train_cell GM12878 \
+--test_cell GM12878 \
 --model_dir ./test/model/normalized_BENGI/GM12878/ \
 --pred_dir ./test/prediction/normalized_BENGI/GM12878/ \
 --tensorboard_dir ./test/tensorboard/normalized_BENGI/GM12878/ \
