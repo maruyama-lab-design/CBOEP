@@ -5,7 +5,7 @@ We have made some changes to the TransEPI code that had been published in https:
 `cross_validation.py` is our main execution file of TransEPI.
 
 
-## Requirements
+<!-- ## Requirements
 We have tested the work in the following environments.
 
 | Library | Version |
@@ -16,7 +16,7 @@ We have tested the work in the following environments.
 |```pandas```|2.0.3|
 |```tqdm```||
 |```matplotlib```|3.2.2|
-|```tensorboard```|2.16.2|
+|```tensorboard```|2.16.2| -->
 
 
 

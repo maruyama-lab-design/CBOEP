@@ -5,7 +5,7 @@ We have made some changes to the TargetFinder code that had been published in ht
 
 `cross_validation.py` is the main execution file of TargetFinder. 
 
-## Requirements
+<!-- ## Requirements
 We have tested the work in the following environments.
 
 | Library | Version |
@@ -14,7 +14,7 @@ We have tested the work in the following environments.
 |```pandas```|2.0.3|
 |```joblib```|1.3.2|
 |```scipy```|1.10.1|
-|```scilit-learn```|1.3.0|
+|```scilit-learn```|1.3.0| -->
 
 
 ## Data Preprocessing
