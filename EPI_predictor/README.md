@@ -1,3 +1,3 @@
-The 2 EPI predictors used in our study, TransEPI [Chen K 2021] and TargetFinder [Whalen S 2016], are in included.
-
-For execution, please refer to the README in each folder.
+We used the following two EPI predictors, TransEPI [Chen K 2021] and TargetFinder [Whalen S 2016]. 
+Note that both are slightly modified. Details of the modifications are given in the Readme file in each folder. 
+How to run them is also shown in the Readme files.
