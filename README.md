@@ -3,7 +3,7 @@
 This repository contains files related to our methods, CBMF and CBGS, which generate a set of negative enhancer-promoter interactions (EPIs) from a set of positive EPIs. 
 The implementations of the methods are `cbmf.py` and `cbgs.py` in the top directory. 
 
-Related to this study has been published in the preceedings of ACM-BCB 2023 [1].
+The scripts we coded in this study [1] has been published in the preceedings of ACM-BCB 2023.
 
 # Datasets
 CBMF and CBGS require a positive EPIs set as input to generate a negative dataset.
