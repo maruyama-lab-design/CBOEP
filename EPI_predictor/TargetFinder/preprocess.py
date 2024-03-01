@@ -34,7 +34,7 @@ def preprocess_features(args):
 	generators = []
 
 	# preprocess peaks
-	peaks_dir = os.path.join(os.path.dirname(__file__), "features", args.cell, "peaks")
+	peaks_dir = os.path.join(os.path.dirname(__file__), "input_features", args.cell, "peaks")
 	if os.path.exists(peaks_dir):
 		print(f"preprocess peaks...")
 		assays = []
@@ -48,7 +48,7 @@ def preprocess_features(args):
 		generators.append((chromatics.generate_average_signal_features, peaks_fn))
 
 	# preprocess methylation
-	methylation_dir = os.path.join(os.path.dirname(__file__), "features", args.cell, "methylation")
+	methylation_dir = os.path.join(os.path.dirname(__file__), "input_features", args.cell, "methylation")
 	if os.path.exists(methylation_dir):
 		print(f"preprocess methylation...")
 		assays = [chromatics.read_bed(_, names = chromatics.methylation_bed_columns, usecols = chromatics.generic_bed_columns + ['mapped_reads', 'percent_methylated']) for _ in glob(os.path.join(methylation_dir, f"*.bed.gz"))]
@@ -59,7 +59,7 @@ def preprocess_features(args):
 		generators.append((chromatics.generate_average_signal_features, methylation_fn))
 
 	# preprocess cage
-	cage_dir = os.path.join(os.path.dirname(__file__), "features", args.cell, "cage")
+	cage_dir = os.path.join(os.path.dirname(__file__), "input_features", args.cell, "cage")
 	if os.path.exists(cage_dir):
 		print(f"preprocess cage...")
 		cage_df = chromatics.read_bed(glob(os.path.join(cage_dir, f"*.bed.gz"))[0], names = chromatics.cage_bed_columns, usecols = chromatics.cage_bed_columns[:5])

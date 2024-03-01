@@ -23,12 +23,12 @@ We have tested the work in the following environments.
 ## Preparation of genomic data
 
 Before running,
-download the genomic data folder from Onedrive (https://qu365-my.sharepoint.com/:f:/g/personal/maruyama_osamu_158_m_kyushu-u_ac_jp/EkiuCr1GzwNPolz9kCVqJu4BareEnjI_PpzwOVmtpIPqmA?e=Z8n8SM) and place it in the same location as `cross_validation.py`.
+download the folder ```input_features``` from Onedrive (https://qu365-my.sharepoint.com/:f:/g/personal/maruyama_osamu_158_m_kyushu-u_ac_jp/EkiuCr1GzwNPolz9kCVqJu4BareEnjI_PpzwOVmtpIPqmA?e=Z8n8SM) and place it in the same location as `cross_validation.py`.
 
 Then, please describe as follows in the variable "feats_config" in the `opt.json` file.
 
 ```
-"feats_config": "[Path to the genomic data folder]/CTCF_DNase_6histone.500.json",
+"feats_config": "[Path to the downloaded folder]/CTCF_DNase_6histone.500.json",
 ```
 
 

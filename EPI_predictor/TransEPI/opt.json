@@ -1,8 +1,8 @@
 {
 
     "feats_order": ["CTCF", "DNase", "H3K4me1", "H3K4me3", "H3K36me3", "H3K9me3",  "H3K27me3"],
-    "feats_config": "genomic_data/CTCF_DNase_6histone.500.json", 
-    "feats_config": "/home/koga/MyFolder/github/CBOEP/EPI_predictor/TransEPI/genomic_data/CTCF_DNase_6histone.500.json", 
+    "feats_config": "input_features/CTCF_DNase_6histone.500.json", 
+    "feats_config": "/home/koga/MyFolder/github/CBOEP/EPI_predictor/TransEPI/input_features/CTCF_DNase_6histone.500.json", 
     "bin_size": 500,
     "seq_len": 2500000,
 
