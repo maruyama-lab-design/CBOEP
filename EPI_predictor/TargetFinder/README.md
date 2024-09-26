@@ -21,8 +21,7 @@ We have tested the work in the following environments.
 
 
 Before running,
-download the folder ```input_features``` from [Onedrive](https://qu365-my.sharepoint.com/:f:/g/personal/maruyama_osamu_158_m_kyushu-u_ac_jp/Eq4u59Q5ruhDq9IhyvhuyywB2Nb_6ud5WhD6bPcmvj8mbQ?e=aiMEND) and place it in the same location as `cross_validation.py`.
-
+download the folder ```input_features``` from [Onedrive](https://qu365-my.sharepoint.com/:f:/g/personal/maruyama_osamu_158_m_kyushu-u_ac_jp/Ev1P9trUWRhDleRyd1xn8EMBzZxch881tSOQWLRSWZHEzg?e=gqBFZh) and place it in the same location as `cross_validation.py`.
 
 Then, this genomic features must be added to the EPI dataset using `preprocess.py`.
 The following command adds genomic data to EPI data whose file path is given in `-i`.

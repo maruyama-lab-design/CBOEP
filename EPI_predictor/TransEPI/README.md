@@ -23,7 +23,7 @@ We have tested the work in the following environments.
 ## Preparation of genomic data
 
 Before running,
-download the folder ```input_features``` from Onedrive (https://qu365-my.sharepoint.com/:f:/g/personal/maruyama_osamu_158_m_kyushu-u_ac_jp/EkiuCr1GzwNPolz9kCVqJu4BareEnjI_PpzwOVmtpIPqmA?e=Z8n8SM) and place it in the same location as `cross_validation.py`.
+download the folder ```input_features``` from Onedrive (https://qu365-my.sharepoint.com/:f:/g/personal/maruyama_osamu_158_m_kyushu-u_ac_jp/EuQWee0pLztNiNB3TBHAQVABnKVPhszXhEJFk33H1EsGFw?e=5JvIzw) and place it in the same location as `cross_validation.py`.
 
 Then, please describe as follows in the variable "feats_config" in the `opt.json` file.
 
