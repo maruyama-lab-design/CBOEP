@@ -20,8 +20,11 @@ We have tested the work in the following environments.
 ## Data Preprocessing
 
 
-Before running,
-download the folder ```input_features``` from [Onedrive](https://qu365-my.sharepoint.com/:f:/g/personal/maruyama_osamu_158_m_kyushu-u_ac_jp/Ev1P9trUWRhDleRyd1xn8EMBzZxch881tSOQWLRSWZHEzg?e=gqBFZh) and place it in the same location as `cross_validation.py`.
+Before an execution, 
+make a folder ```input_features``` in the folder in which `cross_validation.py` exists, 
+download a folder you use like GM12878 from [TargetFinder GitHub site](https://github.com/shwhalen/targetfinder/tree/master), 
+and put it in ```input_features```. 
+
 
 Then, this genomic features must be added to the EPI dataset using `preprocess.py`.
 The following command adds genomic data to EPI data whose file path is given in `-i`.
