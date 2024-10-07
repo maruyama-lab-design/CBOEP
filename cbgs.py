@@ -178,8 +178,8 @@ def CBGS(args):
 def get_args():
 	p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	
-	p.add_argument("-i", "-infile", help="input file path")
-	p.add_argument("-o", "-outfile", help="output file path")
+	p.add_argument("-i", "--infile", help="input file path")
+	p.add_argument("-o", "--outfile", help="output file path")
 	p.add_argument("--dmin", type=int, default=0, help="minimum distance between enhancer and promoter")
 	p.add_argument("--dmax", default=2500000, help="maximum distance between enhancer and promoter")
 	p.add_argument("--alpha", type=float, default=1.0)

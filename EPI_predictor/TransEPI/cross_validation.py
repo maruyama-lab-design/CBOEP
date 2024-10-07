@@ -318,7 +318,7 @@ def test(model_class, model_params,
 
 def get_args():
     p = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    p.add_argument('--gpu', default=1, type=int, help="GPU ID, (-1 for CPU)")
+    p.add_argument('--gpu', default=0, type=int, help="GPU ID, (-1 for CPU)")
     p.add_argument('--seed', type=int, default=2020, help="Random seed")
     p.add_argument('--train_mode', action='store_true', help="Train model")
     p.add_argument('--test_mode', action='store_true', help="Test model")
